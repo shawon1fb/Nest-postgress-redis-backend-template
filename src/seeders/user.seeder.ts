@@ -1,6 +1,8 @@
 import { faker } from '@faker-js/faker';
 import * as bcrypt from 'bcrypt';
 import { eq, sql } from 'drizzle-orm';
+import * as dotenv from 'dotenv';
+dotenv.config();
 import { createDatabaseConnection, closeDatabaseConnection } from '../database/connection';
 import { users, UserRole } from '../database/schema';
 
