@@ -1,4 +1,4 @@
-# Multi-stage Dockerfile for Sports Admin Panel Backend
+# Multi-stage Dockerfile for Backend template
 # Stage 1: Build stage with all dependencies
 FROM node:18-alpine AS builder
 

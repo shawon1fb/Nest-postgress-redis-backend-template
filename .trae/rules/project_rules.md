@@ -1,7 +1,7 @@
 # Project Implementation Rules
 
 ## Overview
-This document establishes mandatory implementation standards for the Sports Admin Panel Backend project. All developers must strictly adhere to these rules to ensure consistency, maintainability, and architectural integrity.
+This document establishes mandatory implementation standards for the Backend template project. All developers must strictly adhere to these rules to ensure consistency, maintainability, and architectural integrity.
 
 ## 1. Database ORM Requirements
 

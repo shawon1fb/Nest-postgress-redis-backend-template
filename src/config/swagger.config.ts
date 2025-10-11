@@ -4,7 +4,7 @@ import { IsNotEmpty, IsOptional } from 'class-validator';
 @Configuration()
 export class SwaggerConfig {
   @IsNotEmpty()
-  @Value('SWAGGER_TITLE', { default: 'Sports Admin Panel API' })
+  @Value('SWAGGER_TITLE', { default: 'Backend template API' })
   title: string;
 
   @IsNotEmpty()
@@ -16,7 +16,7 @@ export class SwaggerConfig {
   version: string;
 
   @IsOptional()
-  @Value('SWAGGER_CONTACT_NAME', { default: 'Sports Admin Team' })
+  @Value('SWAGGER_CONTACT_NAME', { default: 'Backend template Team' })
   contactName: string;
 
   @IsOptional()

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Sports Admin Panel Backend - Environment Management Script
+# Backend template - Environment Management Script
 
 set -e
 

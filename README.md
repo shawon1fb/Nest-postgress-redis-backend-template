@@ -1,4 +1,4 @@
-# Sports Admin Panel Backend
+# Backend template
 
 A comprehensive NestJS-based backend application for sports administration, built with modern technologies including Drizzle ORM, Redis, PostgreSQL, and BullMQ for job processing.
 
@@ -47,7 +47,7 @@ docker-compose --version
 
 ```bash
 git clone <repository-url>
-cd sports-admin-panel-backend
+cd backend-template
 ```
 
 ### 2. Install Dependencies
@@ -367,7 +367,7 @@ yarn build
    ```bash
    # Clone repository
    git clone <repository-url>
-   cd sports-admin-panel-backend
+   cd backend-template
    
    # Install dependencies
    yarn install --production
@@ -389,7 +389,7 @@ yarn build
 4. **Process Management**
    ```bash
    # Start with PM2
-   pm2 start dist/main.js --name "sports-admin-backend"
+   pm2 start dist/main.js --name "backend-template"
    
    # Save PM2 configuration
    pm2 save
@@ -425,7 +425,7 @@ yarn build
 pm2 status
 
 # Check application logs
-pm2 logs sports-admin-backend
+pm2 logs backend-template
 
 # Test API endpoints
 curl https://your-domain.com/api/v1/health
@@ -463,7 +463,7 @@ free -m
 
 ```bash
 # View application logs
-pm2 logs sports-admin-backend --lines 100
+pm2 logs backend-template --lines 100
 
 # Rotate logs
 pm2 install pm2-logrotate
@@ -490,7 +490,7 @@ find $BACKUP_DIR -name "backup_*.sql" -mtime +7 -delete
 git pull origin main
 yarn install --production
 yarn build
-pm2 restart sports-admin-backend
+pm2 restart backend-template
 
 # Update system packages
 sudo apt update && sudo apt upgrade -y
@@ -610,4 +610,4 @@ yarn drizzle-kit push
 
 **Last Updated**: 2025-01-24  
 **Version**: 1.0.0  
-**Maintainer**: Sports Admin Team
+**Maintainer**: Backend template Team
