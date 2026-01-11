@@ -1,10 +1,9 @@
-version: '2.2'
 services:
   redis:
     image: redis:6.2.6
-    container_name: redis
+    container_name: backend-template-redis
     ports:
-      - '6379:6379'
+      - '6381:6379'
     command: redis-server --requirepass eChTelptB2spNWp92Pv_U2FJd8tT9jQg
     environment:
       - REDIS_REPLICATION_MODE=master
@@ -17,9 +16,9 @@ services:
       - backend_network
   redis-bullmq:
     image: redis:6.2.6
-    container_name: redis-bullmq
+    container_name: backend-template-redis-bullmq
     ports:
-      - '6380:6379'
+      - '6382:6379'
     command: redis-server
     environment:
       - REDIS_REPLICATION_MODE=master
@@ -31,9 +30,9 @@ services:
       - backend_network
   redis-bullboard:
     image: deadly0/bull-board
-    container_name: redis-bullboard
+    container_name: backend-template-redis-bullboard
     ports:
-      - '3000:3000'
+      - '3001:3000'
     environment:
       - REDIS_HOST=redis-bullmq
       - REDIS_PORT=6379
@@ -45,9 +44,9 @@ services:
       - backend_network
   postgres:
     image: postgres:15-alpine
-    container_name: postgres
+    container_name: backend-template-postgres
     ports:
-      - '5432:5432'
+      - '5433:5432'
     environment:
       - POSTGRES_DB=task_db
       - POSTGRES_USER=task_user
