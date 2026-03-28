@@ -24,12 +24,13 @@ async function bootstrap() {
   // Apply global security measures
   app.useGlobalPipes(new CustomValidationPipe());
   app.useGlobalFilters(new GlobalExceptionFilter());
-  
+
   // Enable CORS for API endpoints
   app.enableCors({
-    origin: process.env.NODE_ENV === 'production' 
-      ? process.env.ALLOWED_ORIGINS?.split(',') || false
-      : true,
+    origin:
+      process.env.NODE_ENV === 'production'
+        ? process.env.ALLOWED_ORIGINS?.split(',') || false
+        : true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
@@ -37,17 +38,21 @@ async function bootstrap() {
 
   // Register Swagger documentation
   if (swaggerConfig.enabled) {
-     const config = new DocumentBuilder()
-    .setTitle(swaggerConfig.title)
-    .setDescription(swaggerConfig.description)
-    .setVersion(swaggerConfig.version)
-   .setContact(swaggerConfig.contactName, swaggerConfig.contactEmail, swaggerConfig.contactEmail)
-    .addTag('default')  
-    .build();
-  const documentFactory = () => SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup(swaggerConfig.path, app, documentFactory, {
-    jsonDocumentUrl: 'swagger/json',
-  });
+    const config = new DocumentBuilder()
+      .setTitle(swaggerConfig.title)
+      .setDescription(swaggerConfig.description)
+      .setVersion(swaggerConfig.version)
+      .setContact(
+        swaggerConfig.contactName,
+        swaggerConfig.contactEmail,
+        swaggerConfig.contactEmail,
+      )
+      .addTag('default')
+      .build();
+    const documentFactory = () => SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup(swaggerConfig.path, app, documentFactory, {
+      jsonDocumentUrl: 'swagger/json',
+    });
   }
   // Log all available routes using Fastify's onRoute hook
   app

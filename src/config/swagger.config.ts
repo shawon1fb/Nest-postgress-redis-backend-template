@@ -8,7 +8,10 @@ export class SwaggerConfig {
   title: string;
 
   @IsNotEmpty()
-  @Value('SWAGGER_DESCRIPTION', { default: 'A comprehensive NestJS-based backend application for sports administration' })
+  @Value('SWAGGER_DESCRIPTION', {
+    default:
+      'A comprehensive NestJS-based backend application for sports administration',
+  })
   description: string;
 
   @IsNotEmpty()
@@ -40,15 +43,14 @@ export class SwaggerConfig {
       return [
         {
           url: 'http://localhost:8000',
-          description: 'Development server'
+          description: 'Development server',
         },
         {
           url: 'https://api.sportsadmin.com',
-          description: 'Production server'
-        }
+          description: 'Production server',
+        },
       ];
     }
     return JSON.parse(this.servers);
   }
-
 }
