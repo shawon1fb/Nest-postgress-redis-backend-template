@@ -6,7 +6,7 @@ import {
 import { AppModule } from './app.module';
 import compression from '@fastify/compress';
 import { CustomValidationPipe, GlobalExceptionFilter } from './common';
-// import { SwaggerConfig } from './config/swagger.config';
+import { SwaggerConfig } from './config/swagger.config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -15,16 +15,8 @@ async function bootstrap() {
   );
   await app.register(compression);
 
-  // Get configuration
-  // const swaggerConfig = app.get(SwaggerConfig);
-    const config = new DocumentBuilder()
-    .setTitle('Cats example')
-    .setDescription('The cats API description')
-    .setVersion('1.0')
-    .addTag('cats')
-    .build();
-  const documentFactory = () => SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, documentFactory);
+  // Get Swagger configuration
+  const swaggerConfig = app.get(SwaggerConfig);
 
   // Global request logging
   // app.useGlobalInterceptors(new LoggingInterceptor());
@@ -44,22 +36,19 @@ async function bootstrap() {
   });
 
   // Register Swagger documentation
-  // if (swaggerConfig.enabled) {
-    // await app.register(require('@fastify/swagger'), swaggerConfig.getSwaggerOptions());
-    // await app.register(require('@fastify/swagger-ui'), {
-    //   routePrefix: swaggerConfig.path,
-    //   uiConfig: {
-    //     docExpansion: 'list',
-    //     deepLinking: false,
-    //   },
-    //   staticCSP: true,
-    //   transformStaticCSP: (header) => header,
-    //   transformSpecification: (swaggerObject, request, reply) => {
-    //     return swaggerObject;
-    //   },
-    //   transformSpecificationClone: true,
-    // });
-  // }
+  if (swaggerConfig.enabled) {
+     const config = new DocumentBuilder()
+    .setTitle(swaggerConfig.title)
+    .setDescription(swaggerConfig.description)
+    .setVersion(swaggerConfig.version)
+   .setContact(swaggerConfig.contactName, swaggerConfig.contactEmail, swaggerConfig.contactEmail)
+    .addTag('default')  
+    .build();
+  const documentFactory = () => SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup(swaggerConfig.path, app, documentFactory, {
+    jsonDocumentUrl: 'swagger/json',
+  });
+  }
   // Log all available routes using Fastify's onRoute hook
   app
     .getHttpAdapter()
