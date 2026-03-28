@@ -14,7 +14,7 @@ import { AppConfig } from '../config/app.config';
     JwtModule.registerAsync({
       useFactory: async (appConfig: AppConfig) => ({
         secret: appConfig.jwtSecret,
-        signOptions: { expiresIn: appConfig.jwtExpiresIn },
+        signOptions: { expiresIn: appConfig.jwtExpiresIn as any },
       }),
       inject: [AppConfig],
     }),
