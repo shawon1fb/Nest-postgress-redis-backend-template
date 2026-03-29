@@ -37,20 +37,4 @@ export class SwaggerConfig {
   @IsOptional()
   @Value('SWAGGER_SERVERS')
   servers?: string;
-
-  getServers() {
-    if (!this.servers) {
-      return [
-        {
-          url: 'http://localhost:8000',
-          description: 'Development server',
-        },
-        {
-          url: 'https://api.sportsadmin.com',
-          description: 'Production server',
-        },
-      ];
-    }
-    return JSON.parse(this.servers);
-  }
 }
