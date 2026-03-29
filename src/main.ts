@@ -51,7 +51,7 @@ async function bootstrap() {
       .build();
     const documentFactory = () => SwaggerModule.createDocument(app, config);
     SwaggerModule.setup(swaggerConfig.path, app, documentFactory, {
-      jsonDocumentUrl: 'swagger/json',
+      jsonDocumentUrl: swaggerConfig.path + '/json',
     });
   }
   // Log all available routes using Fastify's onRoute hook
