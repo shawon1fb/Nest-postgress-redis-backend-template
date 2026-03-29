@@ -861,7 +861,7 @@
     ajv-formats "^3.0.1"
     fast-uri "^3.0.0"
 
-"@fastify/compress@^8.1.0":
+"@fastify/compress@^8.3.1":
   version "8.3.1"
   resolved "https://registry.yarnpkg.com/@fastify/compress/-/compress-8.3.1.tgz#69b209e744bc371d1b7c2e69b2d6c01b7e1908a1"
   integrity sha512-BUpItLr6MUX9e9ukg5Y6xekyA/7pBFG8QWtFCrUDm9ctoBc3R2/nA16yOaOWtVoccpXGjdDEYA/MxAb5+8cxag==

@@ -8,6 +8,7 @@ import compression from '@fastify/compress';
 import { CustomValidationPipe, GlobalExceptionFilter } from './common';
 import { SwaggerConfig } from './config/swagger.config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,

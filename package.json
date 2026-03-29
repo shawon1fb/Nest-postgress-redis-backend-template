@@ -34,7 +34,7 @@
     "@bull-board/nestjs": "^6.12.5",
     "@bull-board/ui": "^6.12.5",
     "@faker-js/faker": "^10.0.0",
-    "@fastify/compress": "^8.1.0",
+    "@fastify/compress": "^8.3.1",
     "@itgorillaz/configify": "^4.0.1",
     "@keyv/redis": "^5.1.1",
     "@nestjs/axios": "^4.0.1",
