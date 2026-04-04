@@ -122,8 +122,7 @@ const app = express(); // FORBIDDEN
     "@fastify/cors": "^latest",
     "@fastify/helmet": "^latest",
     "@fastify/rate-limit": "^latest",
-    "@fastify/swagger": "^latest",
-    "@fastify/swagger-ui": "^latest"
+    "@nestjs/swagger": "^latest"
   }
 }
 ```
@@ -169,8 +168,7 @@ const app = express(); // FORBIDDEN
     "@fastify/cors": "^latest",
     "@fastify/helmet": "^latest",
     "@fastify/rate-limit": "^latest",
-    "@fastify/swagger": "^latest",
-    "@fastify/swagger-ui": "^latest"
+    "@nestjs/swagger": "^latest"
   },
   "devDependencies": {
     "@types/pg": "^latest"
