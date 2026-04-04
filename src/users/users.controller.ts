@@ -302,7 +302,7 @@ export class UsersController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Delete current user profile',
-    description: 'Soft deletes the currently authenticated user account.',
+    description: 'Soft deletes the currently authenticated user account. Requires a valid JWT access token.',
   })
   @ApiResponse({
     status: 200,
@@ -311,7 +311,7 @@ export class UsersController {
   })
   @ApiResponse({
     status: 401,
-    description: 'Unauthorized - Invalid or missing authentication',
+    description: 'Unauthorized - Invalid or missing JWT access token',
   })
   async deleteProfile(
     @CurrentUser() user: UserResponseDto,
