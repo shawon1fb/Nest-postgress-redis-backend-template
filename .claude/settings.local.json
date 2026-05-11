@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/shahanulhaque/Desktop/Projects/backend/Nest-postgress-redis-backend-template status)",
+      "Bash(git -C /Users/shahanulhaque/Desktop/Projects/backend/Nest-postgress-redis-backend-template diff)",
+      "Bash(git -C /Users/shahanulhaque/Desktop/Projects/backend/Nest-postgress-redis-backend-template log --oneline -5)",
+      "Bash(git -C /Users/shahanulhaque/Desktop/Projects/backend/Nest-postgress-redis-backend-template add CLAUDE.md)",
+      "Bash(git -C /Users/shahanulhaque/Desktop/Projects/backend/Nest-postgress-redis-backend-template commit -m ' *)",
+      "Bash(git *)"
+    ]
+  }
+}
