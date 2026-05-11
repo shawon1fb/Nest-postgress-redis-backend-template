@@ -41,26 +41,24 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       exception instanceof Error ? exception.stack : undefined,
     );
 
-    // Sanitize error response for production
-    const errorResponse = {
+    const sanitizedMessage = this.sanitizeMessage(message, status);
+    const sanitizedErrors = errors ? this.sanitizeErrors(errors) : undefined;
+
+    const errorResponse: Record<string, any> = {
+      success: false,
       statusCode: status,
-      timestamp: new Date().toISOString(),
-      path: request.url,
-      method: request.method,
-      message: this.sanitizeMessage(message, status),
-      ...(errors && { errors: this.sanitizeErrors(errors) }),
+      message: sanitizedMessage,
+      ...(sanitizedErrors && { errors: sanitizedErrors }),
     };
 
-    // Remove sensitive information in production
-    if (process.env.NODE_ENV === 'production') {
-      delete errorResponse.path;
-      delete errorResponse.method;
+    if (process.env.NODE_ENV !== 'production') {
+      errorResponse.path = request.url;
+      errorResponse.method = request.method;
+    }
 
-      // Generic error messages for server errors in production
-      if (status >= 500) {
-        errorResponse.message = 'Internal server error';
-        delete errorResponse.errors;
-      }
+    if (process.env.NODE_ENV === 'production' && status >= 500) {
+      errorResponse.message = 'Internal server error';
+      delete errorResponse.errors;
     }
 
     response.status(status).send(errorResponse);

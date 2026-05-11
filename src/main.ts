@@ -5,7 +5,11 @@ import {
 } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module';
 import compression from '@fastify/compress';
-import { CustomValidationPipe, GlobalExceptionFilter } from './common';
+import {
+  CustomValidationPipe,
+  GlobalExceptionFilter,
+  TransformInterceptor,
+} from './common';
 import { SwaggerConfig } from './config/swagger.config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
@@ -25,6 +29,7 @@ async function bootstrap() {
   // Apply global security measures
   app.useGlobalPipes(new CustomValidationPipe());
   app.useGlobalFilters(new GlobalExceptionFilter());
+  app.useGlobalInterceptors(new TransformInterceptor());
 
   // Enable CORS for API endpoints
   app.enableCors({
