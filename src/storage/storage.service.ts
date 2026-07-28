@@ -17,6 +17,7 @@ import { MessageResponseDto, PaginatedResponseDto } from '../common/dto';
 import { PaginationUtil } from '../common/utils';
 import { STORAGE_DRIVER, StorageDriver } from './interfaces';
 import { FileResponseDto, FileUrlResponseDto, QueryFileDto } from './dto';
+import { StorageMessage, translate } from '../common/i18n';
 
 export interface UploadFileInput {
   buffer: Buffer;
@@ -146,24 +147,29 @@ export class StorageService {
     const db = this.databaseService.getDatabase();
     await db.delete(files).where(eq(files.id, id));
 
-    return { message: 'File deleted successfully' };
+    return { message: StorageMessage.DELETED };
   }
 
   private assertAcceptable(input: UploadFileInput): void {
     if (!input.buffer.length) {
-      throw new BadRequestException('Uploaded file is empty');
+      throw new BadRequestException(StorageMessage.EMPTY_FILE);
     }
 
     if (input.buffer.length > this.config.maxFileSize) {
       throw new PayloadTooLargeException(
-        `File exceeds the maximum allowed size of ${this.config.maxFileSize} bytes`,
+        translate(StorageMessage.FILE_TOO_LARGE, {
+          maxSize: this.config.maxFileSize,
+        }),
       );
     }
 
     const allowed = this.config.allowedMimeTypeList;
     if (allowed.length && !allowed.includes(input.mimeType)) {
       throw new UnsupportedMediaTypeException(
-        `MIME type ${input.mimeType} is not allowed. Allowed: ${allowed.join(', ')}`,
+        translate(StorageMessage.MIME_NOT_ALLOWED, {
+          mimeType: input.mimeType,
+          allowed: allowed.join(', '),
+        }),
       );
     }
   }
@@ -186,7 +192,7 @@ export class StorageService {
     const [record] = await db.select().from(files).where(eq(files.id, id));
 
     if (!record) {
-      throw new NotFoundException('File not found');
+      throw new NotFoundException(StorageMessage.FILE_NOT_FOUND);
     }
     return record;
   }

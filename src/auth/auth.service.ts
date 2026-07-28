@@ -11,6 +11,7 @@ import { AppConfig } from '../config/app.config';
 
 import { IsEmail, IsString, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { AuthMessage } from '../common/i18n';
 
 export class LoginDto {
   @ApiProperty({
@@ -82,28 +83,26 @@ export class AuthService {
     // Check if account is locked
     const isLocked = await this.usersService.isAccountLocked(email);
     if (isLocked) {
-      throw new UnauthorizedException(
-        'Account is temporarily locked due to too many failed login attempts',
-      );
+      throw new UnauthorizedException(AuthMessage.ACCOUNT_LOCKED);
     }
 
     // Find user by email
     const user = await this.findUserForAuthentication(email);
     if (!user) {
       await this.usersService.updateLoginAttempts(email, false);
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException(AuthMessage.INVALID_CREDENTIALS);
     }
 
     // Verify password
     const isPasswordValid = await this.verifyPassword(password, user.password);
     if (!isPasswordValid) {
       await this.usersService.updateLoginAttempts(email, false);
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException(AuthMessage.INVALID_CREDENTIALS);
     }
 
     // Check if user is active
     if (!user.isActive) {
-      throw new UnauthorizedException('Account is deactivated');
+      throw new UnauthorizedException(AuthMessage.ACCOUNT_DEACTIVATED);
     }
 
     // Reset login attempts on successful login
@@ -146,12 +145,12 @@ export class AuthService {
 
       const user = await this.usersService.findOne(payload.sub);
       if (!user || !user.isActive) {
-        throw new UnauthorizedException('Invalid refresh token');
+        throw new UnauthorizedException(AuthMessage.INVALID_REFRESH_TOKEN);
       }
 
       return this.generateTokens(user);
     } catch (error) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new UnauthorizedException(AuthMessage.INVALID_REFRESH_TOKEN);
     }
   }
 
@@ -163,7 +162,7 @@ export class AuthService {
 
     // For now, we'll just return a success message
     // The client should remove tokens from storage
-    return { message: 'Logged out successfully' };
+    return { message: AuthMessage.LOGGED_OUT };
   }
 
   async changePassword(
@@ -183,7 +182,7 @@ export class AuthService {
     if (!user) {
       // Don't reveal if email exists or not for security
       return {
-        message: 'If the email exists, a password reset link has been sent',
+        message: AuthMessage.PASSWORD_RESET_SENT,
       };
     }
 
@@ -201,7 +200,7 @@ export class AuthService {
     // await this.emailService.sendPasswordResetEmail(user.email, resetToken);
 
     return {
-      message: 'If the email exists, a password reset link has been sent',
+      message: AuthMessage.PASSWORD_RESET_SENT,
     };
   }
 
@@ -219,7 +218,7 @@ export class AuthService {
     );
 
     if (!user) {
-      throw new BadRequestException('Invalid or expired reset token');
+      throw new BadRequestException(AuthMessage.INVALID_RESET_TOKEN);
     }
 
     // Update password and clear reset token
@@ -229,7 +228,7 @@ export class AuthService {
       passwordResetExpires: null,
     });
 
-    return { message: 'Password reset successfully' };
+    return { message: AuthMessage.PASSWORD_RESET_SUCCESS };
   }
 
   // Private helper methods

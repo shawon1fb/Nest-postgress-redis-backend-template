@@ -1,0 +1,11 @@
+{
+  "not_found": "User not found",
+  "email_exists": "User with this email already exists",
+  "username_exists": "User with this username already exists",
+  "password_changed": "Password changed successfully",
+  "password_mismatch": "New password and confirm password do not match",
+  "current_password_incorrect": "Current password is incorrect",
+  "deleted": "User deleted successfully",
+  "account_deactivated": "Account deactivated successfully",
+  "email_or_username_exists": "User with this email or username already exists"
+}

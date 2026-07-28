@@ -9,6 +9,8 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { FastifyReply } from 'fastify';
 import { SKIP_TRANSFORM_KEY } from '../decorators/skip-transform.decorator';
+import { translateMessage } from '../i18n/translate.util';
+import { CommonMessage } from '../i18n';
 
 function isPaginatedResult(val: any): val is { data: any[]; meta: object } {
   return (
@@ -50,12 +52,15 @@ export class TransformInterceptor implements NestInterceptor {
     return next.handle().pipe(
       map((data) => {
         const statusCode = response.statusCode;
+        // Handlers return translation keys (or plain strings); localize here so
+        // services never need the request language.
+        const successMessage = translateMessage(CommonMessage.SUCCESS);
 
         if (isMessageOnly(data)) {
           return {
             success: true,
             statusCode,
-            message: data.message,
+            message: translateMessage(data.message),
             data: null,
           };
         }
@@ -64,7 +69,7 @@ export class TransformInterceptor implements NestInterceptor {
           return {
             success: true,
             statusCode,
-            message: 'Success',
+            message: successMessage,
             data: data.data,
             meta: data.meta,
           };
@@ -73,7 +78,7 @@ export class TransformInterceptor implements NestInterceptor {
         return {
           success: true,
           statusCode,
-          message: 'Success',
+          message: successMessage,
           data,
         };
       }),

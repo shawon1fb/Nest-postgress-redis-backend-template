@@ -1,0 +1,8 @@
+{
+  "success": "Success",
+  "internal_error": "Internal server error",
+  "unauthorized": "Unauthorized",
+  "forbidden": "Forbidden resource",
+  "not_found": "Resource not found",
+  "validation_failed": "Validation failed"
+}

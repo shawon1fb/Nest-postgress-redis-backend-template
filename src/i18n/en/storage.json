@@ -1,0 +1,10 @@
+{
+  "file_not_found": "File not found",
+  "no_file_uploaded": "No file was uploaded",
+  "multipart_required": "Request must be multipart/form-data with a \"file\" part",
+  "empty_file": "Uploaded file is empty",
+  "file_too_large": "File exceeds the maximum allowed size of {maxSize} bytes",
+  "mime_not_allowed": "MIME type {mimeType} is not allowed. Allowed: {allowed}",
+  "deleted": "File deleted successfully",
+  "invalid_expires_in": "expiresIn must be a positive number"
+}

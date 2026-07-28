@@ -68,6 +68,7 @@ Already shared — use these, don't recreate:
 | Message-only response | `MessageResponseDto` |
 | Swagger response docs | `ApiEnvelopeResponse`, `ApiEnvelopePaginatedResponse`, `ApiEnvelopeMessageResponse`, `ApiErrorResponse` |
 | Success envelope | `TransformInterceptor` (global — handlers return bare payloads) |
+| User-facing message | A `*Message` enum member from `src/i18n/translation-keys.ts` — never a string literal |
 | Raw/streamed response | `@SkipTransform()` — opts a route out of the envelope |
 | File storage | `StorageService` (never talk to a driver directly) |
 | Error envelope | `GlobalExceptionFilter` (global — throw Nest `HttpException` subclasses, never bare `Error`) |
@@ -83,7 +84,11 @@ src/
     connection.ts  # createDatabaseConnection()
     database.module.ts   # Global module, provides DATABASE_CONNECTION token
     database.service.ts  # DatabaseService wraps db for injection
+  i18n/
+    translation-keys.ts  # message key enums — the only place keys are spelled out
+    en/ bn/        # locale files, one JSON per namespace
   common/
+    i18n/          # translate() / translateMessage() helpers
     dto/           # ApiResponseDto, ErrorResponseDto, MessageResponseDto, PaginatedResponseDto
     decorators/    # ApiEnvelope*/ApiErrorResponse Swagger decorators
     interceptors/  # TransformInterceptor (global response envelope)
@@ -117,6 +122,12 @@ When a field carries a development default that would be unsafe to inherit in pr
 **Cache**: `CacheModule` (global) uses Redis as primary store with in-memory LRU fallback. Cache namespace is `app-cache`. Falls back to memory-only if Redis is unreachable on startup.
 
 **Queue**: BullMQ connects to Redis via `BullMQRedisConfig`. Bull Board UI available at `/queues` (dev only).
+
+**Localization**: the request language comes from the `x-lang` header, then `?lang=`, then `Accept-Language`, falling back to `I18N_FALLBACK_LANGUAGE` (`en`). Locale files live in `src/i18n/<lang>/<namespace>.json`.
+
+Services never inject an i18n service. They throw or return a **translation key enum** — `throw new NotFoundException(UsersMessage.NOT_FOUND)`, `return { message: UsersMessage.DELETED }` — and `TransformInterceptor` / `GlobalExceptionFilter` localize it at the edge. Strings that are not keys pass through untouched. For messages with placeholders, call `translate(StorageMessage.FILE_TOO_LARGE, { maxSize })` from `src/common/i18n`.
+
+Never write a key as a string literal; add a member to the matching enum in `src/i18n/translation-keys.ts` and an entry in **every** locale file. A spec fails the build if any locale is missing a key or defines one the enums don't declare.
 
 **Storage**: `STORAGE_DRIVER` (`local` | `s3` | `appwrite`) picks one `StorageDriver` implementation at startup; `StorageService` is the only thing callers inject. The `s3` driver also covers MinIO, Cloudflare R2, DigitalOcean Spaces and Wasabi via `STORAGE_S3_ENDPOINT` + `STORAGE_S3_FORCE_PATH_STYLE`. Uploads are recorded in the `files` table and addressed by a generated key, never by the client-supplied filename. To add a backend: implement `StorageDriver`, add a `StorageDriverName` entry, register it in `STORAGE_DRIVERS` in `storage.module.ts` — nothing else changes.
 

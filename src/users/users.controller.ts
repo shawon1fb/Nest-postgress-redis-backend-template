@@ -41,6 +41,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Public, Roles, CurrentUser } from '../auth/decorators';
 import { UserRole } from '../database/schema';
+import { UsersMessage } from '../common/i18n';
 
 const UNAUTHORIZED = {
   status: 401,
@@ -288,7 +289,7 @@ export class UsersController {
   ): Promise<MessageResponseDto> {
     // Soft delete for user's own account
     await this.usersService.softDelete(user.id);
-    return { message: 'Account deactivated successfully' };
+    return { message: UsersMessage.ACCOUNT_DEACTIVATED };
   }
 
   @Delete(':id')

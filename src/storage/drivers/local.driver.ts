@@ -13,6 +13,7 @@ import {
   PutObjectResult,
   StorageDriver,
 } from '../interfaces/storage-driver.interface';
+import { StorageMessage } from '../../common/i18n';
 
 /**
  * Writes to the local filesystem under `STORAGE_LOCAL_ROOT`.
@@ -42,7 +43,7 @@ export class LocalStorageDriver implements StorageDriver {
   async get(key: string): Promise<Readable> {
     const path = this.resolveKey(key);
     if (!(await this.pathExists(path))) {
-      throw new NotFoundException('File not found');
+      throw new NotFoundException(StorageMessage.FILE_NOT_FOUND);
     }
     return createReadStream(path);
   }
@@ -73,7 +74,7 @@ export class LocalStorageDriver implements StorageDriver {
   private resolveKey(key: string): string {
     const path = resolve(join(this.root, normalize(key)));
     if (path !== this.root && !path.startsWith(this.root + sep)) {
-      throw new NotFoundException('File not found');
+      throw new NotFoundException(StorageMessage.FILE_NOT_FOUND);
     }
     return path;
   }

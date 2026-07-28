@@ -19,6 +19,7 @@ import {
 import { plainToClass } from 'class-transformer';
 import { PaginationUtil, FilterUtil } from '../common/utils';
 import { PaginatedResponseDto } from '../common/dto';
+import { UsersMessage } from '../common/i18n';
 
 @Injectable()
 export class UsersService {
@@ -50,9 +51,7 @@ export class UsersService {
     } catch (error) {
       if (error.code === '23505') {
         // Unique constraint violation
-        throw new ConflictException(
-          'User with this email or username already exists',
-        );
+        throw new ConflictException(UsersMessage.EMAIL_OR_USERNAME_EXISTS);
       }
       throw error;
     }
@@ -204,9 +203,7 @@ export class UsersService {
       return this.transformToResponseDto(updatedUser);
     } catch (error) {
       if (error.code === '23505') {
-        throw new ConflictException(
-          'User with this email or username already exists',
-        );
+        throw new ConflictException(UsersMessage.EMAIL_OR_USERNAME_EXISTS);
       }
       throw error;
     }
@@ -233,7 +230,7 @@ export class UsersService {
       user.password,
     );
     if (!isCurrentPasswordValid) {
-      throw new UnauthorizedException('Current password is incorrect');
+      throw new UnauthorizedException(UsersMessage.CURRENT_PASSWORD_INCORRECT);
     }
 
     // Hash new password
@@ -247,7 +244,7 @@ export class UsersService {
       })
       .where(eq(users.id, id));
 
-    return { message: 'Password changed successfully' };
+    return { message: UsersMessage.PASSWORD_CHANGED };
   }
 
   async remove(id: string): Promise<{ message: string }> {
@@ -262,10 +259,10 @@ export class UsersService {
       .returning({ id: users.id });
 
     if (!deletedUser) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException(UsersMessage.NOT_FOUND);
     }
 
-    return { message: 'User deleted successfully' };
+    return { message: UsersMessage.DELETED };
   }
 
   async softDelete(id: string): Promise<UserResponseDto> {
@@ -336,7 +333,7 @@ export class UsersService {
     const [user] = await db.select().from(users).where(eq(users.id, id));
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException(UsersMessage.NOT_FOUND);
     }
 
     return user;
@@ -370,10 +367,10 @@ export class UsersService {
 
     if (existingUser) {
       if (existingUser.email === email?.toLowerCase()) {
-        throw new ConflictException('User with this email already exists');
+        throw new ConflictException(UsersMessage.EMAIL_EXISTS);
       }
       if (existingUser.username === username?.toLowerCase()) {
-        throw new ConflictException('User with this username already exists');
+        throw new ConflictException(UsersMessage.USERNAME_EXISTS);
       }
     }
   }

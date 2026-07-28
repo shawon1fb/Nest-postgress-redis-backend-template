@@ -7,6 +7,8 @@ import {
   Logger,
 } from '@nestjs/common';
 import { FastifyRequest, FastifyReply } from 'fastify';
+import { translateMessage } from '../i18n/translate.util';
+import { CommonMessage } from '../i18n';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -41,7 +43,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       exception instanceof Error ? exception.stack : undefined,
     );
 
-    const sanitizedMessage = this.sanitizeMessage(message, status);
+    // Services throw translation keys; localize before the message is
+    // sanitized and sent. Literal messages pass through unchanged.
+    const localizedMessage = translateMessage(message);
+    const sanitizedMessage = this.sanitizeMessage(localizedMessage, status);
     const sanitizedErrors = errors ? this.sanitizeErrors(errors) : undefined;
 
     const errorResponse: Record<string, any> = {
@@ -57,7 +62,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     }
 
     if (process.env.NODE_ENV === 'production' && status >= 500) {
-      errorResponse.message = 'Internal server error';
+      errorResponse.message = translateMessage(CommonMessage.INTERNAL_ERROR);
       delete errorResponse.errors;
     }
 
@@ -69,7 +74,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     status: number,
   ): string | string[] {
     if (process.env.NODE_ENV === 'production' && status >= 500) {
-      return 'Internal server error';
+      return translateMessage(CommonMessage.INTERNAL_ERROR);
     }
 
     if (Array.isArray(message)) {

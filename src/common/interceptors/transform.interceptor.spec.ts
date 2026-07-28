@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { of, lastValueFrom } from 'rxjs';
 import { TransformInterceptor } from './transform.interceptor';
 import { PaginatedResponseDto } from '../dto';
+import { CommonMessage, UsersMessage } from '../i18n';
 
 const contextWithStatus = (statusCode: number) =>
   ({
@@ -34,18 +35,16 @@ describe('TransformInterceptor', () => {
     await expect(run({ id: '1' }, 201)).resolves.toEqual({
       success: true,
       statusCode: 201,
-      message: 'Success',
+      message: CommonMessage.SUCCESS,
       data: { id: '1' },
     });
   });
 
   it('hoists message-only results and nulls data', async () => {
-    await expect(
-      run({ message: 'User deleted successfully' }),
-    ).resolves.toEqual({
+    await expect(run({ message: UsersMessage.DELETED })).resolves.toEqual({
       success: true,
       statusCode: 200,
-      message: 'User deleted successfully',
+      message: UsersMessage.DELETED,
       data: null,
     });
   });
@@ -56,7 +55,7 @@ describe('TransformInterceptor', () => {
     await expect(run(paginated)).resolves.toEqual({
       success: true,
       statusCode: 200,
-      message: 'Success',
+      message: CommonMessage.SUCCESS,
       data: [{ id: '1' }],
       meta: {
         total: 25,
@@ -73,7 +72,7 @@ describe('TransformInterceptor', () => {
     await expect(run(null)).resolves.toEqual({
       success: true,
       statusCode: 200,
-      message: 'Success',
+      message: CommonMessage.SUCCESS,
       data: null,
     });
   });
@@ -99,7 +98,7 @@ describe('TransformInterceptor', () => {
     ).resolves.toEqual({
       success: true,
       statusCode: 200,
-      message: 'Success',
+      message: CommonMessage.SUCCESS,
       data: { a: 1 },
     });
   });

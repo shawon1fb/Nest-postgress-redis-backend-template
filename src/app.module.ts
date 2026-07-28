@@ -11,6 +11,14 @@ import { createKeyv } from '@keyv/redis';
 import { CacheModule, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { createKeyv as createKeyvMemory } from 'cacheable';
 import { ConfigifyModule } from '@itgorillaz/configify';
+import {
+  AcceptLanguageResolver,
+  HeaderResolver,
+  I18nModule,
+  QueryResolver,
+} from 'nestjs-i18n';
+import { join } from 'path';
+import { I18nConfig } from './config/i18n.config';
 import { BullModule } from '@nestjs/bullmq';
 import { BullBoardConfigModule } from './bull-board/bull-board.module';
 import { Cache } from 'cache-manager';
@@ -28,6 +36,28 @@ import {
 @Module({
   imports: [
     ConfigifyModule.forRootAsync(),
+    // Language comes from the `x-lang` header first, then `?lang=`, then
+    // Accept-Language. Anything unknown falls back to I18N_FALLBACK_LANGUAGE.
+    I18nModule.forRootAsync({
+      useFactory: (i18nConfig: I18nConfig) => ({
+        fallbackLanguage: i18nConfig.fallbackLanguage,
+        loaderOptions: {
+          path: join(__dirname, '/i18n/'),
+          watch: i18nConfig.watch,
+        },
+        typesOutputPath: undefined,
+      }),
+      resolvers: [
+        {
+          use: HeaderResolver,
+          useFactory: (i18nConfig: I18nConfig) => [i18nConfig.headerName],
+          inject: [I18nConfig],
+        },
+        { use: QueryResolver, options: ['lang'] },
+        AcceptLanguageResolver,
+      ],
+      inject: [I18nConfig],
+    }),
     CacheModule.registerAsync({
       isGlobal: true,
       imports: [ConfigifyModule],

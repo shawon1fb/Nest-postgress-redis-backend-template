@@ -14,6 +14,7 @@ import {
   SignedUrlOptions,
   StorageDriver,
 } from '../interfaces/storage-driver.interface';
+import { StorageMessage } from '../../common/i18n';
 
 /**
  * Appwrite Storage buckets.
@@ -170,7 +171,7 @@ export class AppwriteStorageDriver implements StorageDriver {
 
   private toHttpException(error: unknown, fallbackMessage: string): Error {
     if (this.statusOf(error) === 404) {
-      return new NotFoundException('File not found');
+      return new NotFoundException(StorageMessage.FILE_NOT_FOUND);
     }
     return new InternalServerErrorException(fallbackMessage);
   }

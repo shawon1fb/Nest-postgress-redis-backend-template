@@ -39,6 +39,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { CurrentUser, Roles } from '../auth/decorators';
 import { UserRole } from '../database/schema';
 import { UserResponseDto } from '../users/dto';
+import { StorageMessage } from '../common/i18n';
 
 const UNAUTHORIZED = {
   status: 401,
@@ -99,14 +100,12 @@ export class StorageController {
     @CurrentUser() user: UserResponseDto,
   ): Promise<FileResponseDto> {
     if (!request.isMultipart()) {
-      throw new BadRequestException(
-        'Request must be multipart/form-data with a "file" part',
-      );
+      throw new BadRequestException(StorageMessage.MULTIPART_REQUIRED);
     }
 
     const upload = await request.file();
     if (!upload) {
-      throw new BadRequestException('No file was uploaded');
+      throw new BadRequestException(StorageMessage.NO_FILE_UPLOADED);
     }
 
     const buffer = await upload.toBuffer();
@@ -194,7 +193,7 @@ export class StorageController {
     const ttl = expiresIn === undefined ? undefined : Number(expiresIn);
 
     if (ttl !== undefined && (!Number.isFinite(ttl) || ttl <= 0)) {
-      throw new BadRequestException('expiresIn must be a positive number');
+      throw new BadRequestException(StorageMessage.INVALID_EXPIRES_IN);
     }
     return this.storageService.getUrl(id, ttl);
   }

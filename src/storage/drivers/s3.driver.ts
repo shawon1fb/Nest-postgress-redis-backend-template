@@ -19,6 +19,7 @@ import {
   SignedUrlOptions,
   StorageDriver,
 } from '../interfaces/storage-driver.interface';
+import { StorageMessage } from '../../common/i18n';
 
 /**
  * Works against any S3-compatible API: AWS S3, MinIO, Cloudflare R2,
@@ -83,7 +84,7 @@ export class S3StorageDriver implements StorageDriver {
       );
 
       if (!result.Body) {
-        throw new NotFoundException('File not found');
+        throw new NotFoundException(StorageMessage.FILE_NOT_FOUND);
       }
       return result.Body as Readable;
     } catch (error) {
@@ -131,7 +132,7 @@ export class S3StorageDriver implements StorageDriver {
       ?.$metadata?.httpStatusCode;
 
     if (name === 'NoSuchKey' || name === 'NotFound' || statusCode === 404) {
-      return new NotFoundException('File not found');
+      return new NotFoundException(StorageMessage.FILE_NOT_FOUND);
     }
     return new InternalServerErrorException(fallbackMessage);
   }
