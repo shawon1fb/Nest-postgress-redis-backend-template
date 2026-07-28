@@ -14,6 +14,7 @@ import {
 import { SwaggerConfig } from './config/swagger.config';
 import { StorageConfig } from './config/storage.config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { ParameterObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -53,6 +54,15 @@ async function bootstrap() {
 
   // Register Swagger documentation
   if (swaggerConfig.enabled) {
+    const xLangHeader: ParameterObject = {
+      name: 'x-lang',
+      in: 'header',
+      description:
+        'Preferred response language (e.g. `en`, `bn`). Falls back to the server default when omitted or unsupported.',
+      required: false,
+      schema: { type: 'string', example: 'en' },
+    };
+
     const config = new DocumentBuilder()
       .setTitle(swaggerConfig.title)
       .setDescription(swaggerConfig.description)
@@ -63,6 +73,7 @@ async function bootstrap() {
         swaggerConfig.contactEmail,
       )
       .addBearerAuth()
+      .addGlobalParameters(xLangHeader)
       .addTag('default')
       .build();
     const documentFactory = () => SwaggerModule.createDocument(app, config);
