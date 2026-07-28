@@ -17,7 +17,7 @@ export const createDatabaseConnection = (config: DatabaseConfig) => {
     user: config.username,
     password: config.password,
     database: config.database,
-    ssl: false,
+    ssl: config.ssl ? { rejectUnauthorized: false } : false,
     max: 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 2000,

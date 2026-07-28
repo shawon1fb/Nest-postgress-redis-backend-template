@@ -1,5 +1,6 @@
 import { Configuration, Value } from '@itgorillaz/configify';
-import { IsNotEmpty, IsOptional } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { toBoolean } from './parsers';
 
 @Configuration()
 export class SwaggerConfig {
@@ -30,11 +31,14 @@ export class SwaggerConfig {
   @Value('SWAGGER_PATH', { default: '/api/docs' })
   path: string;
 
-  @IsNotEmpty()
-  @Value('SWAGGER_ENABLED', { default: true })
+  // Must be parsed: without it `SWAGGER_ENABLED=false` is the truthy string
+  // "false", which would publish the API docs in production.
+  @IsBoolean()
+  @Value('SWAGGER_ENABLED', { parse: toBoolean, default: true })
   enabled: boolean;
 
   @IsOptional()
-  @Value('SWAGGER_SERVERS')
+  @IsString()
+  @Value('SWAGGER_SERVERS', { default: '' })
   servers?: string;
 }

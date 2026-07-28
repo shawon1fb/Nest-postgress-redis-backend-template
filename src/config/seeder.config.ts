@@ -1,34 +1,39 @@
 import { Configuration, Value } from '@itgorillaz/configify';
-import { IsOptional, IsNumber, Min, Max, IsBoolean } from 'class-validator';
+import {
+  IsInt,
+  Min,
+  Max,
+  IsBoolean,
+  IsString,
+  IsNotEmpty,
+} from 'class-validator';
+import { toBoolean, toInt } from './parsers';
 
 @Configuration()
 export class SeederConfig {
-  @IsOptional()
-  @IsNumber()
+  @IsInt()
   @Min(1)
   @Max(10000)
-  @Value('SEEDER_USER_COUNT', { parse: parseInt, default: 50 })
+  @Value('SEEDER_USER_COUNT', { parse: toInt, default: 50 })
   userCount: number;
 
-  @IsOptional()
   @IsBoolean()
-  @Value('SEEDER_CLEAR_EXISTING', { default: true })
+  @Value('SEEDER_CLEAR_EXISTING', { parse: toBoolean, default: true })
   clearExisting: boolean;
 
-  @IsOptional()
   @IsBoolean()
-  @Value('SEEDER_VERBOSE_LOGGING', { default: true })
+  @Value('SEEDER_VERBOSE_LOGGING', { parse: toBoolean, default: true })
   verboseLogging: boolean;
 
-  @IsOptional()
+  @IsNotEmpty()
+  @IsString()
   @Value('SEEDER_ENVIRONMENT', { default: 'development' })
   environment: string;
 
-  @IsOptional()
-  @IsNumber()
+  @IsInt()
   @Min(1)
   @Max(100)
-  @Value('SEEDER_BATCH_SIZE', { parse: parseInt, default: 10 })
+  @Value('SEEDER_BATCH_SIZE', { parse: toInt, default: 10 })
   batchSize: number;
 
   // Safety check to prevent running in production

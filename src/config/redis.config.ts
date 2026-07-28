@@ -1,19 +1,35 @@
 import { Configuration, Value } from '@itgorillaz/configify';
-import { IsNotEmpty, IsOptional } from 'class-validator';
+import {
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
+import { toInt } from './parsers';
 
 @Configuration()
 export class RedisConfig {
   @IsNotEmpty()
-  @Value('REDIS_HOST')
+  @IsString()
+  @Value('REDIS_HOST', { default: 'localhost' })
   host: string;
-  @IsNotEmpty()
-  @Value('REDIS_PORT')
+
+  @IsInt()
+  @Min(1)
+  @Max(65535)
+  @Value('REDIS_PORT', { parse: toInt, default: 6379 })
   port: number;
+
   @IsOptional()
-  @Value('REDIS_PASSWORD')
+  @IsString()
+  @Value('REDIS_PASSWORD', { default: '' })
   password: string;
 
-  @IsNotEmpty()
-  @Value('CACHE_TTL')
+  /** Cache entry lifetime in milliseconds. */
+  @IsInt()
+  @Min(1)
+  @Value('CACHE_TTL', { parse: toInt, default: 3600000 })
   ttl: number;
 }
