@@ -4,7 +4,8 @@
   "sourceRoot": "src",
   "compilerOptions": {
     "deleteOutDir": true,
-    "assets": [{ "include": "i18n/**/*.json", "outDir": "dist" }],
+    "// assets": "Root-level .ts files (drizzle.config.ts, verify-seeding.ts) push the compiler rootDir up, so sources emit to dist/src. The locale JSONs must land next to the compiled app.module.js, which resolves them via join(__dirname, '/i18n/').",
+    "assets": [{ "include": "i18n/**/*.json", "outDir": "dist/src" }],
     "watchAssets": true
   }
 }
