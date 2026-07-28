@@ -28,7 +28,9 @@
     "migrate": "./scripts/db-migrate.sh",
     "fresh": "./scripts/db-fresh.sh",
     "seed:users": "ts-node src/seeders/user.seeder.ts",
-    "seed:admin": "ts-node src/seeders/admin.seeder.ts"
+    "seed:admin": "ts-node src/seeders/admin.seeder.ts",
+    "docker:build": "docker build -t backend-template:latest .",
+    "docker:run": "docker run --rm --env-file .env.production --network nest-postgress-redis-backend-template_backend_network -p 3000:3000 backend-template:latest"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1096.0",

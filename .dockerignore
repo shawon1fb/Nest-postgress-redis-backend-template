@@ -131,8 +131,8 @@ temp/
 *.sqlite
 *.db
 
-# Migration files (if not needed in production)
-drizzle/
+# drizzle/ is intentionally NOT ignored: the image ships migrations so a
+# release job can apply them.
 
 # Scripts
 manage-envs.sh

@@ -13,6 +13,7 @@ import {
 } from './common';
 import { SwaggerConfig } from './config/swagger.config';
 import { StorageConfig } from './config/storage.config';
+import { AppConfig } from './config/app.config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ParameterObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 
@@ -26,6 +27,7 @@ async function bootstrap() {
   // Get Swagger configuration
   const swaggerConfig = app.get(SwaggerConfig);
   const storageConfig = app.get(StorageConfig);
+  const appConfig = app.get(AppConfig);
 
   // File uploads. The limit is enforced again in StorageService so the rule
   // holds for callers that bypass HTTP (queues, seeders).
@@ -89,7 +91,10 @@ async function bootstrap() {
       console.log(`Route registered: ${opts.method} ${opts.url}`);
     });
 
-  await app.listen(process.env.PORT ?? 8000);
+  // Bind to all interfaces by default: the Fastify adapter listens on
+  // 127.0.0.1 when no host is given, which makes the app unreachable from
+  // outside a container even though it is running fine inside it.
+  await app.listen(appConfig.port, process.env.HOST ?? '0.0.0.0');
   console.log(`Application is running on: ${await app.getUrl()}`);
   console.log('All routes have been logged above during registration.');
 }
