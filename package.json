@@ -27,7 +27,8 @@
     "db:check": "drizzle-kit check",
     "migrate": "./scripts/db-migrate.sh",
     "fresh": "./scripts/db-fresh.sh",
-    "seed:users": "ts-node src/seeders/user.seeder.ts"
+    "seed:users": "ts-node src/seeders/user.seeder.ts",
+    "seed:admin": "ts-node src/seeders/admin.seeder.ts"
   },
   "dependencies": {
     "@bull-board/fastify": "^6.12.5",
