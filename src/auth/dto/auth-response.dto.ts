@@ -61,14 +61,6 @@ export class RegisterResponseDto {
   user: UserResponseDto;
 }
 
-/**
- * Message-only handler result. TransformInterceptor hoists `message` onto the
- * envelope and sets `data` to null, so this class is never serialized as-is.
- */
-export class MessageResponseDto {
-  @ApiProperty({
-    description: 'Response message',
-    example: 'Operation completed successfully',
-  })
-  message: string;
-}
+// Message-only responses share the common DTO — re-exported here so existing
+// imports from this module keep working.
+export { MessageResponseDto } from '../../common/dto/api-response.dto';

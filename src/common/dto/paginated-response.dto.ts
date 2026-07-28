@@ -1,6 +1,19 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { PaginationUtil } from '../utils/pagination.util';
 
+/**
+ * Pagination metadata. Field names must stay in sync with
+ * `PaginationUtil.createPaginationResult`, which is the only place meta is
+ * built.
+ */
 export class PaginationMetaDto {
+  @ApiProperty({
+    description: 'Total number of items matching the query',
+    example: 150,
+    minimum: 0,
+  })
+  total: number;
+
   @ApiProperty({
     description: 'Current page number',
     example: 1,
@@ -17,13 +30,6 @@ export class PaginationMetaDto {
   limit: number;
 
   @ApiProperty({
-    description: 'Total number of items',
-    example: 150,
-    minimum: 0,
-  })
-  total: number;
-
-  @ApiProperty({
     description: 'Total number of pages',
     example: 15,
     minimum: 0,
@@ -31,28 +37,57 @@ export class PaginationMetaDto {
   totalPages: number;
 
   @ApiProperty({
-    description: 'Whether there is a next page',
+    description: 'Whether a next page exists',
     example: true,
   })
-  hasNext: boolean;
+  hasNextPage: boolean;
 
   @ApiProperty({
-    description: 'Whether there is a previous page',
+    description: 'Whether a previous page exists',
     example: false,
   })
-  hasPrev: boolean;
+  hasPreviousPage: boolean;
 }
 
+/**
+ * Generic paginated payload returned by any service that lists records.
+ *
+ * Reuse it directly — modules should not declare their own paginated DTO:
+ *
+ * ```ts
+ * // service
+ * return PaginatedResponseDto.create(items, total, page, limit);
+ *
+ * // controller
+ * @ApiEnvelopePaginatedResponse(ItemResponseDto, { status: 200, description: '...' })
+ * findAll(): Promise<PaginatedResponseDto<ItemResponseDto>> { ... }
+ * ```
+ *
+ * Swagger never resolves the generic itself; the per-item schema is supplied by
+ * `ApiEnvelopePaginatedResponse(model)`.
+ */
 export class PaginatedResponseDto<T> {
-  @ApiProperty({
-    description: 'Array of items for the current page',
-    isArray: true,
-  })
   data: T[];
 
-  @ApiProperty({
-    description: 'Pagination metadata',
-    type: PaginationMetaDto,
-  })
   meta: PaginationMetaDto;
+
+  constructor(data: T[], meta: PaginationMetaDto) {
+    this.data = data;
+    this.meta = meta;
+  }
+
+  static create<T>(
+    data: T[],
+    total: number,
+    page: number,
+    limit: number,
+  ): PaginatedResponseDto<T> {
+    const result = PaginationUtil.createPaginationResult(
+      data,
+      total,
+      page,
+      limit,
+    );
+    return new PaginatedResponseDto<T>(result.data, result.meta);
+  }
 }

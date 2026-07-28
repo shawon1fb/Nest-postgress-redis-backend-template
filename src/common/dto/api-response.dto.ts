@@ -27,6 +27,20 @@ export class ApiResponseDto {
 }
 
 /**
+ * Message-only handler result, shared by every module. TransformInterceptor
+ * hoists `message` onto the envelope and sets `data` to null, so this class is
+ * never serialized as-is — document such endpoints with
+ * `ApiEnvelopeMessageResponse`.
+ */
+export class MessageResponseDto {
+  @ApiProperty({
+    description: 'Response message',
+    example: 'Operation completed successfully',
+  })
+  message: string;
+}
+
+/**
  * Envelope shape emitted by GlobalExceptionFilter.
  */
 export class ErrorResponseDto {

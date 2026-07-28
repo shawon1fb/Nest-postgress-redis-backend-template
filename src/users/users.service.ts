@@ -15,12 +15,10 @@ import {
   QueryUserDto,
   ChangePasswordDto,
   UserResponseDto,
-  PaginatedUserResponseDto,
-  UserSortField,
-  SortOrder,
 } from './dto';
 import { plainToClass } from 'class-transformer';
 import { PaginationUtil, FilterUtil } from '../common/utils';
+import { PaginatedResponseDto } from '../common/dto';
 
 @Injectable()
 export class UsersService {
@@ -60,7 +58,9 @@ export class UsersService {
     }
   }
 
-  async findAll(queryDto: QueryUserDto): Promise<PaginatedUserResponseDto> {
+  async findAll(
+    queryDto: QueryUserDto,
+  ): Promise<PaginatedResponseDto<UserResponseDto>> {
     const {
       search,
       role,
@@ -143,7 +143,7 @@ export class UsersService {
       }),
     );
 
-    return new PaginatedUserResponseDto(userResponseList, total, page, limit);
+    return PaginatedResponseDto.create(userResponseList, total, page, limit);
   }
 
   async findOne(id: string): Promise<UserResponseDto> {

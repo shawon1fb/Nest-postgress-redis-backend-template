@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Post,
@@ -16,7 +17,6 @@ import {
 import {
   ApiTags,
   ApiOperation,
-  ApiResponse,
   ApiBearerAuth,
   ApiParam,
   ApiQuery,
@@ -28,13 +28,35 @@ import {
   QueryUserDto,
   ChangePasswordDto,
   UserResponseDto,
-  PaginatedUserResponseDto,
+  UpdateUserRoleDto,
 } from './dto';
-import { MessageResponseDto } from '../auth/dto/auth-response.dto';
+import { MessageResponseDto, PaginatedResponseDto } from '../common/dto';
+import {
+  ApiEnvelopeResponse,
+  ApiEnvelopePaginatedResponse,
+  ApiEnvelopeMessageResponse,
+  ApiErrorResponse,
+} from '../common/decorators';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Public, Roles, CurrentUser } from '../auth/decorators';
 import { UserRole } from '../database/schema';
+
+const UNAUTHORIZED = {
+  status: 401,
+  description: 'Unauthorized - Invalid or missing authentication',
+  message: 'Unauthorized',
+};
+const NOT_FOUND = {
+  status: 404,
+  description: 'User not found',
+  message: 'User not found',
+};
+const forbidden = (roles: string) => ({
+  status: 403,
+  description: `Forbidden - ${roles} access required`,
+  message: 'Forbidden resource',
+});
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -49,19 +71,21 @@ export class UsersController {
   @ApiOperation({
     summary: 'Create a new user',
     description: 'Creates a new user account. Public registration allowed.',
+    security: [], // @Public() route — overrides the controller-level bearer auth
   })
-  @ApiResponse({
+  @ApiEnvelopeResponse(UserResponseDto, {
     status: 201,
     description: 'User created successfully',
-    type: UserResponseDto,
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: 400,
     description: 'Invalid input data or validation errors',
+    message: 'Validation failed',
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: 409,
     description: 'User already exists with this email or username',
+    message: 'User with this email already exists',
   })
   async create(
     @Body(new ValidationPipe({ transform: true, whitelist: true }))
@@ -77,63 +101,23 @@ export class UsersController {
     description:
       'Retrieves a paginated list of users with optional filtering and sorting. Admin or Moderator access required.',
   })
-  @ApiQuery({
-    name: 'search',
-    required: false,
-    description: 'Search term for filtering users',
-  })
-  @ApiQuery({
-    name: 'role',
-    required: false,
-    enum: UserRole,
-    description: 'Filter by user role',
-  })
-  @ApiQuery({
-    name: 'isActive',
-    required: false,
-    type: Boolean,
-    description: 'Filter by active status',
-  })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    type: Number,
-    description: 'Page number (default: 1)',
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    type: Number,
-    description: 'Items per page (default: 10, max: 100)',
-  })
-  @ApiQuery({
-    name: 'sortBy',
-    required: false,
-    description: 'Sort field (default: createdAt)',
-  })
-  @ApiQuery({
-    name: 'sortOrder',
-    required: false,
-    enum: ['asc', 'desc'],
-    description: 'Sort order (default: desc)',
-  })
-  @ApiResponse({
+  @ApiEnvelopePaginatedResponse(UserResponseDto, {
     status: 200,
     description: 'Users retrieved successfully',
-    type: PaginatedUserResponseDto,
   })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - Invalid or missing authentication',
+  @ApiErrorResponse({
+    status: 400,
+    description: 'Invalid query parameters',
+    message: 'Invalid sort field: foo',
   })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - Admin or Moderator access required',
-  })
+  @ApiErrorResponse(UNAUTHORIZED)
+  @ApiErrorResponse(forbidden('Admin or Moderator'))
   async findAll(
+    // Query params are documented from QueryUserDto's @ApiPropertyOptional
+    // metadata — do not duplicate them with @ApiQuery.
     @Query(new ValidationPipe({ transform: true, whitelist: true }))
     queryDto: QueryUserDto,
-  ): Promise<PaginatedUserResponseDto> {
+  ): Promise<PaginatedResponseDto<UserResponseDto>> {
     return this.usersService.findAll(queryDto);
   }
 
@@ -143,15 +127,12 @@ export class UsersController {
     description:
       'Retrieves the profile information of the currently authenticated user.',
   })
-  @ApiResponse({
+  @ApiEnvelopeResponse(UserResponseDto, {
     status: 200,
     description: 'Profile retrieved successfully',
-    type: UserResponseDto,
   })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - Invalid or missing authentication',
-  })
+  @ApiErrorResponse(UNAUTHORIZED)
+  @ApiErrorResponse(NOT_FOUND)
   async getProfile(
     @CurrentUser() user: UserResponseDto,
   ): Promise<UserResponseDto> {
@@ -165,24 +146,19 @@ export class UsersController {
     description:
       'Retrieves a specific user by their unique identifier. Admin or Moderator access required.',
   })
-  @ApiParam({ name: 'id', description: 'User UUID', type: 'string' })
-  @ApiResponse({
+  @ApiParam({ name: 'id', description: 'User UUID', format: 'uuid' })
+  @ApiEnvelopeResponse(UserResponseDto, {
     status: 200,
     description: 'User retrieved successfully',
-    type: UserResponseDto,
   })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - Invalid or missing authentication',
+  @ApiErrorResponse({
+    status: 400,
+    description: 'Malformed UUID',
+    message: 'Validation failed (uuid is expected)',
   })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - Admin or Moderator access required',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'User not found',
-  })
+  @ApiErrorResponse(UNAUTHORIZED)
+  @ApiErrorResponse(forbidden('Admin or Moderator'))
+  @ApiErrorResponse(NOT_FOUND)
   async findOne(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<UserResponseDto> {
@@ -193,21 +169,19 @@ export class UsersController {
   @ApiOperation({
     summary: 'Update current user profile',
     description:
-      'Updates the profile information of the currently authenticated user. Only certain fields can be updated.',
+      'Updates the profile information of the currently authenticated user. Only firstName, lastName and profilePicture are applied.',
   })
-  @ApiResponse({
+  @ApiEnvelopeResponse(UserResponseDto, {
     status: 200,
     description: 'Profile updated successfully',
-    type: UserResponseDto,
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: 400,
     description: 'Invalid input data or validation errors',
+    message: 'Validation failed',
   })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - Invalid or missing authentication',
-  })
+  @ApiErrorResponse(UNAUTHORIZED)
+  @ApiErrorResponse(NOT_FOUND)
   async updateProfile(
     @CurrentUser() user: UserResponseDto,
     @Body(new ValidationPipe({ transform: true, whitelist: true }))
@@ -222,7 +196,7 @@ export class UsersController {
 
     // Remove undefined fields
     const filteredUpdate = Object.fromEntries(
-      Object.entries(allowedFields).filter(([_, value]) => value !== undefined),
+      Object.entries(allowedFields).filter(([, value]) => value !== undefined),
     );
 
     return this.usersService.update(user.id, filteredUpdate);
@@ -235,31 +209,23 @@ export class UsersController {
     description:
       'Updates a specific user by their unique identifier. Admin access required.',
   })
-  @ApiParam({ name: 'id', description: 'User UUID', type: 'string' })
-  @ApiResponse({
+  @ApiParam({ name: 'id', description: 'User UUID', format: 'uuid' })
+  @ApiEnvelopeResponse(UserResponseDto, {
     status: 200,
     description: 'User updated successfully',
-    type: UserResponseDto,
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: 400,
     description: 'Invalid input data or validation errors',
+    message: 'Validation failed',
   })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - Invalid or missing authentication',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - Admin access required',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'User not found',
-  })
-  @ApiResponse({
+  @ApiErrorResponse(UNAUTHORIZED)
+  @ApiErrorResponse(forbidden('Admin'))
+  @ApiErrorResponse(NOT_FOUND)
+  @ApiErrorResponse({
     status: 409,
     description: 'Email or username already exists',
+    message: 'User with this email already exists',
   })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -275,26 +241,28 @@ export class UsersController {
     summary: 'Change user password',
     description: 'Changes the password for the currently authenticated user.',
   })
-  @ApiResponse({
+  @ApiEnvelopeMessageResponse({
     status: 200,
     description: 'Password changed successfully',
-    type: MessageResponseDto,
+    message: 'Password changed successfully',
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: 400,
     description:
       'Invalid input data, password requirements not met, or passwords do not match',
+    message: 'New password and confirm password do not match',
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: 401,
     description:
       'Unauthorized - Invalid current password or missing authentication',
+    message: 'Current password is incorrect',
   })
   async changePassword(
     @CurrentUser() user: UserResponseDto,
     @Body(new ValidationPipe({ transform: true, whitelist: true }))
     changePasswordDto: ChangePasswordDto,
-  ): Promise<{ message: string }> {
+  ): Promise<MessageResponseDto> {
     return this.usersService.changePassword(user.id, changePasswordDto);
   }
 
@@ -305,18 +273,19 @@ export class UsersController {
     description:
       'Soft deletes the currently authenticated user account. Requires a valid JWT access token.',
   })
-  @ApiResponse({
+  @ApiEnvelopeMessageResponse({
     status: 200,
     description: 'Account deactivated successfully',
-    type: MessageResponseDto,
+    message: 'Account deactivated successfully',
   })
-  @ApiResponse({
-    status: 401,
+  @ApiErrorResponse({
+    ...UNAUTHORIZED,
     description: 'Unauthorized - Invalid or missing JWT access token',
   })
+  @ApiErrorResponse(NOT_FOUND)
   async deleteProfile(
     @CurrentUser() user: UserResponseDto,
-  ): Promise<{ message: string }> {
+  ): Promise<MessageResponseDto> {
     // Soft delete for user's own account
     await this.usersService.softDelete(user.id);
     return { message: 'Account deactivated successfully' };
@@ -330,27 +299,18 @@ export class UsersController {
     description:
       'Permanently deletes a user by their unique identifier. Admin access required.',
   })
-  @ApiParam({ name: 'id', description: 'User UUID', type: 'string' })
-  @ApiResponse({
+  @ApiParam({ name: 'id', description: 'User UUID', format: 'uuid' })
+  @ApiEnvelopeMessageResponse({
     status: 200,
     description: 'User deleted successfully',
-    type: MessageResponseDto,
+    message: 'User deleted successfully',
   })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - Invalid or missing authentication',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - Admin access required',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'User not found',
-  })
+  @ApiErrorResponse(UNAUTHORIZED)
+  @ApiErrorResponse(forbidden('Admin'))
+  @ApiErrorResponse(NOT_FOUND)
   async remove(
     @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<{ message: string }> {
+  ): Promise<MessageResponseDto> {
     return this.usersService.remove(id);
   }
 
@@ -361,24 +321,14 @@ export class UsersController {
     summary: 'Activate user',
     description: 'Activates a user account. Admin access required.',
   })
-  @ApiParam({ name: 'id', description: 'User UUID', type: 'string' })
-  @ApiResponse({
+  @ApiParam({ name: 'id', description: 'User UUID', format: 'uuid' })
+  @ApiEnvelopeResponse(UserResponseDto, {
     status: 200,
     description: 'User activated successfully',
-    type: UserResponseDto,
   })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - Invalid or missing authentication',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - Admin access required',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'User not found',
-  })
+  @ApiErrorResponse(UNAUTHORIZED)
+  @ApiErrorResponse(forbidden('Admin'))
+  @ApiErrorResponse(NOT_FOUND)
   async activateUser(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<UserResponseDto> {
@@ -392,24 +342,14 @@ export class UsersController {
     summary: 'Deactivate user',
     description: 'Deactivates a user account. Admin access required.',
   })
-  @ApiParam({ name: 'id', description: 'User UUID', type: 'string' })
-  @ApiResponse({
+  @ApiParam({ name: 'id', description: 'User UUID', format: 'uuid' })
+  @ApiEnvelopeResponse(UserResponseDto, {
     status: 200,
     description: 'User deactivated successfully',
-    type: UserResponseDto,
   })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - Invalid or missing authentication',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - Admin access required',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'User not found',
-  })
+  @ApiErrorResponse(UNAUTHORIZED)
+  @ApiErrorResponse(forbidden('Admin'))
+  @ApiErrorResponse(NOT_FOUND)
   async deactivateUser(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<UserResponseDto> {
@@ -424,24 +364,14 @@ export class UsersController {
     description:
       'Marks a user email as verified. Admin or Moderator access required.',
   })
-  @ApiParam({ name: 'id', description: 'User UUID', type: 'string' })
-  @ApiResponse({
+  @ApiParam({ name: 'id', description: 'User UUID', format: 'uuid' })
+  @ApiEnvelopeResponse(UserResponseDto, {
     status: 200,
     description: 'User email verified successfully',
-    type: UserResponseDto,
   })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - Invalid or missing authentication',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - Admin or Moderator access required',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'User not found',
-  })
+  @ApiErrorResponse(UNAUTHORIZED)
+  @ApiErrorResponse(forbidden('Admin or Moderator'))
+  @ApiErrorResponse(NOT_FOUND)
   async verifyEmail(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<UserResponseDto> {
@@ -455,36 +385,25 @@ export class UsersController {
     summary: 'Update user role',
     description: 'Updates a user role. Admin access required.',
   })
-  @ApiParam({ name: 'id', description: 'User UUID', type: 'string' })
-  @ApiResponse({
+  @ApiParam({ name: 'id', description: 'User UUID', format: 'uuid' })
+  @ApiEnvelopeResponse(UserResponseDto, {
     status: 200,
     description: 'User role updated successfully',
-    type: UserResponseDto,
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: 400,
     description: 'Invalid role',
+    message: 'role must be one of: user, admin, moderator',
   })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - Invalid or missing authentication',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - Admin access required',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'User not found',
-  })
+  @ApiErrorResponse(UNAUTHORIZED)
+  @ApiErrorResponse(forbidden('Admin'))
+  @ApiErrorResponse(NOT_FOUND)
   async updateRole(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body('role') role: UserRole,
+    @Body(new ValidationPipe({ transform: true, whitelist: true }))
+    updateUserRoleDto: UpdateUserRoleDto,
   ): Promise<UserResponseDto> {
-    if (!Object.values(UserRole).includes(role)) {
-      throw new Error('Invalid role');
-    }
-    return this.usersService.update(id, { role });
+    return this.usersService.update(id, { role: updateUserRoleDto.role });
   }
 
   @Get('search/by-email')
@@ -499,28 +418,23 @@ export class UsersController {
     description: 'Email address to search for',
     type: 'string',
   })
-  @ApiResponse({
+  @ApiEnvelopeResponse(UserResponseDto, {
     status: 200,
-    description: 'User found or null if not found',
-    type: UserResponseDto,
+    description: 'User found, or null when no user matches the email',
+    nullable: true,
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: 400,
     description: 'Email parameter is required',
+    message: 'Email query parameter is required',
   })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - Invalid or missing authentication',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - Admin or Moderator access required',
-  })
+  @ApiErrorResponse(UNAUTHORIZED)
+  @ApiErrorResponse(forbidden('Admin or Moderator'))
   async findByEmail(
     @Query('email') email: string,
   ): Promise<UserResponseDto | null> {
     if (!email) {
-      throw new Error('Email parameter is required');
+      throw new BadRequestException('Email query parameter is required');
     }
     return this.usersService.findByEmail(email);
   }
@@ -537,28 +451,23 @@ export class UsersController {
     description: 'Username to search for',
     type: 'string',
   })
-  @ApiResponse({
+  @ApiEnvelopeResponse(UserResponseDto, {
     status: 200,
-    description: 'User found or null if not found',
-    type: UserResponseDto,
+    description: 'User found, or null when no user matches the username',
+    nullable: true,
   })
-  @ApiResponse({
+  @ApiErrorResponse({
     status: 400,
     description: 'Username parameter is required',
+    message: 'Username query parameter is required',
   })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - Invalid or missing authentication',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - Admin or Moderator access required',
-  })
+  @ApiErrorResponse(UNAUTHORIZED)
+  @ApiErrorResponse(forbidden('Admin or Moderator'))
   async findByUsername(
     @Query('username') username: string,
   ): Promise<UserResponseDto | null> {
     if (!username) {
-      throw new Error('Username parameter is required');
+      throw new BadRequestException('Username query parameter is required');
     }
     return this.usersService.findByUsername(username);
   }

@@ -11,7 +11,6 @@ import {
 import { Transform, Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole } from './create-user.dto';
-import { UserResponseDto } from './user-response.dto';
 
 export enum SortOrder {
   ASC = 'asc',
@@ -131,34 +130,4 @@ export class QueryUserDto {
   @IsOptional()
   @IsEnum(SortOrder, { message: 'sortOrder must be either asc or desc' })
   sortOrder?: SortOrder = SortOrder.DESC;
-}
-
-export class PaginatedUserResponseDto {
-  data: UserResponseDto[];
-  meta: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
-  };
-
-  constructor(
-    data: UserResponseDto[],
-    total: number,
-    page: number,
-    limit: number,
-  ) {
-    this.data = data;
-    const totalPages = Math.ceil(total / limit);
-    this.meta = {
-      total,
-      page,
-      limit,
-      totalPages,
-      hasNextPage: page < totalPages,
-      hasPreviousPage: page > 1,
-    };
-  }
 }
