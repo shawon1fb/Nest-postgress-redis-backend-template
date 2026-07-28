@@ -1,4 +1,5 @@
 import { ExecutionContext, CallHandler } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { of, lastValueFrom } from 'rxjs';
 import { TransformInterceptor } from './transform.interceptor';
 import { PaginatedResponseDto } from '../dto';
@@ -8,7 +9,12 @@ const contextWithStatus = (statusCode: number) =>
     switchToHttp: () => ({
       getResponse: () => ({ statusCode }),
     }),
+    getHandler: () => undefined,
+    getClass: () => undefined,
   }) as unknown as ExecutionContext;
+
+const reflectorReturning = (skip: boolean) =>
+  ({ getAllAndOverride: () => skip }) as unknown as Reflector;
 
 const handlerReturning = (value: unknown): CallHandler =>
   ({ handle: () => of(value) }) as CallHandler;
@@ -69,6 +75,32 @@ describe('TransformInterceptor', () => {
       statusCode: 200,
       message: 'Success',
       data: null,
+    });
+  });
+
+  it('leaves the payload untouched on @SkipTransform() handlers', async () => {
+    const raw = new TransformInterceptor(reflectorReturning(true));
+    const stream = { pipe: () => undefined };
+
+    await expect(
+      lastValueFrom(
+        raw.intercept(contextWithStatus(200), handlerReturning(stream)),
+      ),
+    ).resolves.toBe(stream);
+  });
+
+  it('still wraps when the reflector reports no skip metadata', async () => {
+    const wrapping = new TransformInterceptor(reflectorReturning(false));
+
+    await expect(
+      lastValueFrom(
+        wrapping.intercept(contextWithStatus(200), handlerReturning({ a: 1 })),
+      ),
+    ).resolves.toEqual({
+      success: true,
+      statusCode: 200,
+      message: 'Success',
+      data: { a: 1 },
     });
   });
 });

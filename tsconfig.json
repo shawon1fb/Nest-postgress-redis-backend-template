@@ -10,6 +10,11 @@
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
+    "paths": {
+      // node-appwrite ships subpath exports, which classic "node" module
+      // resolution cannot follow. Map the one subpath we use.
+      "node-appwrite/file": ["node_modules/node-appwrite/dist/inputFile.d.ts"]
+    },
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,

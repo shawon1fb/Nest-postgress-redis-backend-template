@@ -4,9 +4,11 @@ import {
   ExecutionContext,
   CallHandler,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { FastifyReply } from 'fastify';
+import { SKIP_TRANSFORM_KEY } from '../decorators/skip-transform.decorator';
 
 function isPaginatedResult(val: any): val is { data: any[]; meta: object } {
   return (
@@ -28,10 +30,22 @@ function isMessageOnly(val: any): val is { message: string } {
 }
 
 @Injectable()
-export class TransformInterceptor<T> implements NestInterceptor {
+export class TransformInterceptor implements NestInterceptor {
+  constructor(private readonly reflector?: Reflector) {}
+
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const ctx = context.switchToHttp();
     const response = ctx.getResponse<FastifyReply>();
+
+    const skip = this.reflector?.getAllAndOverride<boolean>(
+      SKIP_TRANSFORM_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+
+    // Raw responses (file downloads, streams) must not be wrapped.
+    if (skip) {
+      return next.handle();
+    }
 
     return next.handle().pipe(
       map((data) => {

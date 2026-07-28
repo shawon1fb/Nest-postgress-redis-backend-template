@@ -68,6 +68,8 @@ Already shared — use these, don't recreate:
 | Message-only response | `MessageResponseDto` |
 | Swagger response docs | `ApiEnvelopeResponse`, `ApiEnvelopePaginatedResponse`, `ApiEnvelopeMessageResponse`, `ApiErrorResponse` |
 | Success envelope | `TransformInterceptor` (global — handlers return bare payloads) |
+| Raw/streamed response | `@SkipTransform()` — opts a route out of the envelope |
+| File storage | `StorageService` (never talk to a driver directly) |
 | Error envelope | `GlobalExceptionFilter` (global — throw Nest `HttpException` subclasses, never bare `Error`) |
 | Filtering / sorting helpers | `FilterUtil`, `PaginationUtil` |
 
@@ -94,6 +96,9 @@ src/
     decorators/    # @Public(), @Roles(), @CurrentUser(), @RateLimit()
     strategies/    # JWT passport strategy
   users/           # CRUD module — service, controller, DTOs
+  storage/         # File uploads — driver per backend, selected by STORAGE_DRIVER
+    interfaces/    # StorageDriver contract + STORAGE_DRIVER token
+    drivers/       # local, s3, appwrite
   bull-board/      # BullMQ dashboard at /queues
 ```
 
@@ -108,6 +113,8 @@ src/
 **Cache**: `CacheModule` (global) uses Redis as primary store with in-memory LRU fallback. Cache namespace is `app-cache`. Falls back to memory-only if Redis is unreachable on startup.
 
 **Queue**: BullMQ connects to Redis via `BullMQRedisConfig`. Bull Board UI available at `/queues` (dev only).
+
+**Storage**: `STORAGE_DRIVER` (`local` | `s3` | `appwrite`) picks one `StorageDriver` implementation at startup; `StorageService` is the only thing callers inject. The `s3` driver also covers MinIO, Cloudflare R2, DigitalOcean Spaces and Wasabi via `STORAGE_S3_ENDPOINT` + `STORAGE_S3_FORCE_PATH_STYLE`. Uploads are recorded in the `files` table and addressed by a generated key, never by the client-supplied filename. To add a backend: implement `StorageDriver`, add a `StorageDriverName` entry, register it in `STORAGE_DRIVERS` in `storage.module.ts` — nothing else changes.
 
 ## Adding a New Module
 

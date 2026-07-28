@@ -1,16 +1,18 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import {
   FastifyAdapter,
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module';
 import compression from '@fastify/compress';
+import multipart from '@fastify/multipart';
 import {
   CustomValidationPipe,
   GlobalExceptionFilter,
   TransformInterceptor,
 } from './common';
 import { SwaggerConfig } from './config/swagger.config';
+import { StorageConfig } from './config/storage.config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
@@ -22,6 +24,13 @@ async function bootstrap() {
 
   // Get Swagger configuration
   const swaggerConfig = app.get(SwaggerConfig);
+  const storageConfig = app.get(StorageConfig);
+
+  // File uploads. The limit is enforced again in StorageService so the rule
+  // holds for callers that bypass HTTP (queues, seeders).
+  await app.register(multipart, {
+    limits: { fileSize: storageConfig.maxFileSize, files: 1 },
+  });
 
   // Global request logging
   // app.useGlobalInterceptors(new LoggingInterceptor());
@@ -29,7 +38,7 @@ async function bootstrap() {
   // Apply global security measures
   app.useGlobalPipes(new CustomValidationPipe());
   app.useGlobalFilters(new GlobalExceptionFilter());
-  app.useGlobalInterceptors(new TransformInterceptor());
+  app.useGlobalInterceptors(new TransformInterceptor(app.get(Reflector)));
 
   // Enable CORS for API endpoints
   app.enableCors({

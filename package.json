@@ -31,11 +31,14 @@
     "seed:admin": "ts-node src/seeders/admin.seeder.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1096.0",
+    "@aws-sdk/s3-request-presigner": "^3.1096.0",
     "@bull-board/fastify": "^6.12.5",
     "@bull-board/nestjs": "^6.12.5",
     "@bull-board/ui": "^6.12.5",
     "@faker-js/faker": "^10.0.0",
     "@fastify/compress": "^8.3.1",
+    "@fastify/multipart": "^10.1.0",
     "@itgorillaz/configify": "^4.0.1",
     "@keyv/redis": "^5.1.1",
     "@nestjs/axios": "^4.0.1",
@@ -59,6 +62,7 @@
     "class-validator": "^0.14.2",
     "drizzle-orm": "^0.44.4",
     "keyv": "^5.5.0",
+    "node-appwrite": "^27.1.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.16.3",
