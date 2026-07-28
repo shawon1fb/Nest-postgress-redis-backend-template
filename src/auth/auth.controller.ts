@@ -13,7 +13,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { AuthService, LoginDto, AuthResponse } from './auth.service';
+import { AuthService, LoginDto } from './auth.service';
 import { CreateUserDto } from '../users/dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { Public, CurrentUser } from './decorators';
@@ -54,7 +54,7 @@ export class AuthController {
   async register(
     @Body(new ValidationPipe({ transform: true, whitelist: true }))
     createUserDto: CreateUserDto,
-  ): Promise<AuthResponse> {
+  ): Promise<RegisterResponseDto> {
     return this.authService.register(createUserDto);
   }
 
@@ -82,7 +82,7 @@ export class AuthController {
   async login(
     @Body(new ValidationPipe({ transform: true, whitelist: true }))
     loginDto: LoginDto,
-  ): Promise<AuthResponse> {
+  ): Promise<LoginResponseDto> {
     return this.authService.login(loginDto);
   }
 
@@ -109,7 +109,7 @@ export class AuthController {
   async refresh(
     @Body(new ValidationPipe({ transform: true, whitelist: true }))
     refreshTokenDto: RefreshTokenDto,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
+  ): Promise<RefreshResponseDto> {
     return this.authService.refreshTokens(refreshTokenDto.refreshToken);
   }
 
@@ -145,16 +145,13 @@ export class AuthController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Password reset email sent successfully',
+    description:
+      'Password reset request accepted. Returns the same response whether or not the email exists.',
     type: MessageResponseDto,
   })
   @ApiResponse({
     status: 400,
     description: 'Invalid email format',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'User not found with this email',
   })
   async forgotPassword(
     @Body(new ValidationPipe({ transform: true, whitelist: true }))
@@ -177,11 +174,8 @@ export class AuthController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Invalid input data or password requirements not met',
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'Invalid or expired reset token',
+    description:
+      'Invalid input data, password requirements not met, or reset token is invalid/expired',
   })
   async resetPassword(
     @Body(new ValidationPipe({ transform: true, whitelist: true }))

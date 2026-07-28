@@ -35,7 +35,7 @@ export class LoginDto {
 export interface AuthResponse {
   user: UserResponseDto;
   accessToken: string;
-  refreshToken?: string;
+  refreshToken: string;
 }
 
 export interface JwtPayload {
@@ -155,7 +155,7 @@ export class AuthService {
     }
   }
 
-  async logout(userId: string): Promise<{ message: string }> {
+  async logout(_userId: string): Promise<{ message: string }> {
     // In a more complex implementation, you might want to:
     // 1. Blacklist the current tokens
     // 2. Increment token version in database

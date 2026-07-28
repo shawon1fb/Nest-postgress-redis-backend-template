@@ -19,12 +19,6 @@ export class LoginResponseDto {
     type: UserResponseDto,
   })
   user: UserResponseDto;
-
-  @ApiProperty({
-    description: 'Token expiration time in seconds',
-    example: 3600,
-  })
-  expiresIn: number;
 }
 
 export class RefreshResponseDto {
@@ -39,20 +33,20 @@ export class RefreshResponseDto {
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   })
   refreshToken: string;
-
-  @ApiProperty({
-    description: 'Token expiration time in seconds',
-    example: 3600,
-  })
-  expiresIn: number;
 }
 
 export class RegisterResponseDto {
   @ApiProperty({
-    description: 'Success message',
-    example: 'User registered successfully',
+    description: 'JWT access token',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   })
-  message: string;
+  accessToken: string;
+
+  @ApiProperty({
+    description: 'JWT refresh token',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+  })
+  refreshToken: string;
 
   @ApiProperty({
     description: 'User information',
