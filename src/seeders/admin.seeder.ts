@@ -63,8 +63,7 @@ class SimpleAdminSeederConfig {
 
     const envPassword = process.env.ADMIN_PASSWORD;
     this.usedDefaultPassword = !envPassword;
-    this.password =
-      envPassword || SimpleAdminSeederConfig.DEV_DEFAULT_PASSWORD;
+    this.password = envPassword || SimpleAdminSeederConfig.DEV_DEFAULT_PASSWORD;
   }
 
   isProductionEnvironment(): boolean {

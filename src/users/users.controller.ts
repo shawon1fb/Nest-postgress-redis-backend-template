@@ -302,7 +302,8 @@ export class UsersController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Delete current user profile',
-    description: 'Soft deletes the currently authenticated user account. Requires a valid JWT access token.',
+    description:
+      'Soft deletes the currently authenticated user account. Requires a valid JWT access token.',
   })
   @ApiResponse({
     status: 200,

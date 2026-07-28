@@ -1,6 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { UserResponseDto } from '../../users/dto/user-response.dto';
 
+/**
+ * These DTOs describe the handler return value, which TransformInterceptor
+ * places under `data` in the response envelope
+ * (`{ success, statusCode, message, data }`).
+ */
+
 export class LoginResponseDto {
   @ApiProperty({
     description: 'JWT access token',
@@ -55,6 +61,10 @@ export class RegisterResponseDto {
   user: UserResponseDto;
 }
 
+/**
+ * Message-only handler result. TransformInterceptor hoists `message` onto the
+ * envelope and sets `data` to null, so this class is never serialized as-is.
+ */
 export class MessageResponseDto {
   @ApiProperty({
     description: 'Response message',
