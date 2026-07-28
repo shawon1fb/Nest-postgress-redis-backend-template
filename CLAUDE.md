@@ -35,6 +35,10 @@ yarn db:check           # validate migration consistency
 
 # Seeding
 yarn seed:users         # ts-node src/seeders/user.seeder.ts
+
+# Infrastructure
+docker compose up -d                    # postgres, redis, bullmq, bull-board, minio
+docker compose up -d minio minio-init   # object storage only (API :9000, console :9001)
 ```
 
 **Package manager: Yarn only. Never use npm.**
@@ -129,7 +133,9 @@ Services never inject an i18n service. They throw or return a **translation key 
 
 Never write a key as a string literal; add a member to the matching enum in `src/i18n/translation-keys.ts` and an entry in **every** locale file. A spec fails the build if any locale is missing a key or defines one the enums don't declare.
 
-**Storage**: `STORAGE_DRIVER` (`local` | `s3` | `appwrite`) picks one `StorageDriver` implementation at startup; `StorageService` is the only thing callers inject. The `s3` driver also covers MinIO, Cloudflare R2, DigitalOcean Spaces and Wasabi via `STORAGE_S3_ENDPOINT` + `STORAGE_S3_FORCE_PATH_STYLE`. Uploads are recorded in the `files` table and addressed by a generated key, never by the client-supplied filename. To add a backend: implement `StorageDriver`, add a `StorageDriverName` entry, register it in `STORAGE_DRIVERS` in `storage.module.ts` — nothing else changes.
+**Storage**: `STORAGE_DRIVER` (`local` | `s3` | `appwrite`) picks one `StorageDriver` implementation at startup; `StorageService` is the only thing callers inject. The `s3` driver also covers MinIO, Cloudflare R2, DigitalOcean Spaces and Wasabi via `STORAGE_S3_ENDPOINT` + `STORAGE_S3_FORCE_PATH_STYLE` — S3-compatible providers need no new driver.
+
+Local development uses the bundled MinIO: `docker compose up -d minio` starts it and `minio-init` creates `STORAGE_S3_BUCKET`. API on `:9000`, console on `:9001`. docker-compose reads the same `STORAGE_S3_*` vars as the app, so one set of values configures both. Uploads are recorded in the `files` table and addressed by a generated key, never by the client-supplied filename. To add a backend: implement `StorageDriver`, add a `StorageDriverName` entry, register it in `STORAGE_DRIVERS` in `storage.module.ts` — nothing else changes.
 
 ## Adding a New Module
 
