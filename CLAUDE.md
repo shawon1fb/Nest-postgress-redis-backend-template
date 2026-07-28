@@ -49,6 +49,28 @@ NestJS 11 on Fastify (not Express). Three mandatory constraints apply everywhere
 | Config | `@itgorillaz/configify` | `@nestjs/config`, `process.env` direct access |
 | HTTP | Fastify / `@fastify` plugins | Express, Koa, Hapi, any Express middleware |
 
+## Reuse First (mandatory)
+
+Before implementing any feature, search for an existing reusable piece. Do not write a module-local copy of something `src/common/` already solves.
+
+1. **Look first.** Run `graphify query "<the thing you need>"` and check `src/common/` (`dto/`, `decorators/`, `interceptors/`, `filters/`, `pipes/`, `middleware/`, `utils/`). Also check whether another module already solved it.
+2. **Reuse it as-is** if it fits. If it almost fits, extend the shared piece (add an option/generic) instead of forking it.
+3. **If nothing exists, build it reusable** when the need is plausibly not module-specific: put it in `src/common/`, make it generic over the caller's DTO, export it from the matching barrel (`src/common/index.ts`), and document usage in a short doc comment. Only keep something module-local when it is genuinely domain-specific.
+4. **Never duplicate a shared shape.** Two classes with the same name and different fields (e.g. a per-module paginated DTO) will silently desync from runtime. One definition, one source of truth.
+5. **After adding a shared piece**, use it from at least one call site in the same change, and cover it with a spec if it shapes wire output.
+
+Already shared — use these, don't recreate:
+
+| Need | Use |
+|---|---|
+| Paginated payload | `PaginatedResponseDto.create(data, total, page, limit)` + `PaginationUtil` |
+| Pagination metadata | `PaginationMetaDto` (`hasNextPage` / `hasPreviousPage`) |
+| Message-only response | `MessageResponseDto` |
+| Swagger response docs | `ApiEnvelopeResponse`, `ApiEnvelopePaginatedResponse`, `ApiEnvelopeMessageResponse`, `ApiErrorResponse` |
+| Success envelope | `TransformInterceptor` (global — handlers return bare payloads) |
+| Error envelope | `GlobalExceptionFilter` (global — throw Nest `HttpException` subclasses, never bare `Error`) |
+| Filtering / sorting helpers | `FilterUtil`, `PaginationUtil` |
+
 ## Module Structure
 
 ```
@@ -60,6 +82,9 @@ src/
     database.module.ts   # Global module, provides DATABASE_CONNECTION token
     database.service.ts  # DatabaseService wraps db for injection
   common/
+    dto/           # ApiResponseDto, ErrorResponseDto, MessageResponseDto, PaginatedResponseDto
+    decorators/    # ApiEnvelope*/ApiErrorResponse Swagger decorators
+    interceptors/  # TransformInterceptor (global response envelope)
     middleware/    # SecurityHeadersMiddleware, SanitizationMiddleware (applied globally)
     pipes/         # CustomValidationPipe (global)
     filters/       # GlobalExceptionFilter (global)
@@ -86,11 +111,14 @@ src/
 
 ## Adding a New Module
 
+0. Run the **Reuse First** check above before writing anything
 1. Schema changes → `src/database/schema/index.ts` → `yarn db:generate` → `yarn db:migrate`
 2. New config env vars → add `@Configuration()` class in `src/config/`
 3. Service injects `DatabaseService` or `@Inject('DATABASE_CONNECTION')` for raw db
 4. All DTOs use `class-validator` decorators + `@ApiProperty()` for Swagger
 5. Routes are JWT-protected by default; use `@Public()` to opt out
+6. Document responses with the `ApiEnvelope*` decorators — a bare `@ApiResponse({ type: Dto })` is wrong, since `TransformInterceptor` wraps every payload in `{ success, statusCode, message, data }`
+7. Let query DTOs generate their own Swagger params (`@Query() dto: QueryDto`) — do not hand-write `@ApiQuery` per field, it drifts
 
 ## Environment Variables
 
