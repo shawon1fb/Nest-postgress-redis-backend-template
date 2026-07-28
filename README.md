@@ -9,8 +9,14 @@ A comprehensive NestJS-based backend application for sports administration, buil
 - **Caching**: Redis
 - **Job Queue**: BullMQ with Redis
 - **Authentication**: JWT with Passport
-- **Configuration**: @itgorillaz/configify
+- **Configuration**: @itgorillaz/configify (validated at startup)
+- **File Storage**: pluggable driver — local disk, S3-compatible (MinIO/R2/Spaces/Wasabi), Appwrite
+- **Localization**: nestjs-i18n, language from the `x-lang` header
 - **Package Manager**: Yarn
+
+Every response is wrapped in a consistent envelope, every user-facing message is
+translatable, and invalid configuration stops the app from booting. See
+[API Conventions](#-api-conventions) for what that means when writing a module.
 
 ## 📋 Prerequisites
 
@@ -76,15 +82,18 @@ Edit the `.env` file with your specific configuration:
 ```bash
 # Application Configuration
 NODE_ENV=development
-PORT=8000
+PORT=3000
+# Declared and validated, but not applied as a global route prefix — routes are
+# currently served at the root (e.g. /auth/login, not /api/v1/auth/login).
 API_PREFIX=api/v1
 
 # Database Configuration
+# Note: docker-compose maps PostgreSQL to host port 5433, not 5432
 DB_HOST=localhost
-DB_PORT=5432
-DB_USER=sports_user
-DB_PASSWORD=sports_password_2024
-DB_NAME=sports_admin
+DB_PORT=5433
+DB_USER=task_user
+DB_PASSWORD=task_password_2024
+DB_NAME=task_db
 DB_SSL=false
 
 # Database Pool Configuration
@@ -110,9 +119,56 @@ JWT_REFRESH_EXPIRES_IN=7d
 BCRYPT_ROUNDS=12
 RATE_LIMIT_TTL=60
 RATE_LIMIT_LIMIT=100
+
+# BullMQ queue Redis (may point at a different instance than the cache)
+BULLMQ_REDIS_HOST=localhost
+BULLMQ_REDIS_PORT=6379
+BULLMQ_REDIS_PASSWORD=
+
+# File Storage — local | s3 | appwrite
+STORAGE_DRIVER=local
+STORAGE_MAX_FILE_SIZE=10485760
+STORAGE_ALLOWED_MIME_TYPES=
+STORAGE_URL_EXPIRES_IN=900
+
+# S3 / MinIO (also covers Cloudflare R2, DigitalOcean Spaces, Wasabi)
+STORAGE_S3_BUCKET=uploads
+STORAGE_S3_ACCESS_KEY_ID=minioadmin
+STORAGE_S3_SECRET_ACCESS_KEY=minioadmin
+STORAGE_S3_ENDPOINT=http://localhost:9000
+STORAGE_S3_FORCE_PATH_STYLE=true
+STORAGE_S3_VISIBILITY=private          # private -> signed URLs, public -> permanent URLs
+STORAGE_S3_PUBLIC_ENDPOINT=            # address clients use, if it differs
+
+# Localization
+I18N_FALLBACK_LANGUAGE=en
+I18N_HEADER_NAME=x-lang
+I18N_SUPPORTED_LANGUAGES=en,bn
 ```
 
+`.env.example` carries the full list with comments, including the Appwrite and
+local-disk driver blocks.
+
 **⚠️ Security Note**: Always change default passwords and secrets in production!
+
+#### Configuration is validated at boot
+
+Config classes live in `src/config/`, one per domain, using `@Configuration()`
+and `@Value()`. Every value is parsed into its real type and validated — the app
+**refuses to start** on bad input rather than failing later:
+
+```
+BCRYPT_ROUNDS=abc   → exit 1: "bcryptRounds must be an integer number"
+STORAGE_DRIVER=gcs  → exit 1: "STORAGE_DRIVER must be one of: local, s3, appwrite"
+```
+
+Fields carrying a development default that would be unsafe in production are
+marked `@RequiredInProduction('VAR')`. With `NODE_ENV=production`, leaving such a
+variable unset aborts startup — `STORAGE_DRIVER` is one, so a production deploy
+can never silently write uploads to a container filesystem that vanishes on
+restart.
+
+Never read `process.env` directly in application code; inject the config class.
 
 ### 4. Start Infrastructure Services
 
@@ -137,9 +193,9 @@ If you prefer to run services manually:
 ```bash
 # Create database and user
 psql -U postgres
-CREATE DATABASE sports_admin;
-CREATE USER sports_user WITH PASSWORD 'sports_password_2024';
-GRANT ALL PRIVILEGES ON DATABASE sports_admin TO sports_user;
+CREATE DATABASE task_db;
+CREATE USER task_user WITH PASSWORD 'task_password_2024';
+GRANT ALL PRIVILEGES ON DATABASE task_db TO task_user;
 \q
 ```
 
@@ -153,61 +209,58 @@ redis-server --requirepass redis_password
 
 ### Database Initialization
 
-#### 1. Generate Initial Migration
+#### 1. Generate a Migration
 
 ```bash
-# Generate migration files from schema
-yarn drizzle-kit generate
+# after editing src/database/schema/index.ts
+yarn db:generate
 ```
 
 #### 2. Apply Migrations
 
-**Development Environment:**
 ```bash
-# Push schema changes to development database
-yarn drizzle-kit push
-
-# Alternative: Apply specific migration
-yarn drizzle-kit migrate
+yarn db:migrate          # apply pending migrations
+yarn db:check            # validate migration consistency
 ```
 
-**Production Environment:**
-```bash
-# Set production environment
-export NODE_ENV=production
+#### 3. Reset the Database (development only)
 
-# Apply migrations safely
-yarn drizzle-kit migrate
+```bash
+yarn db:fresh            # drop, recreate, migrate (asks for confirmation)
+yarn db:fresh:force      # same, no prompt
 ```
 
-#### 3. Database Schema Verification
+`db:fresh` writes a `pg_dump --schema-only` snapshot into `backups/` first. That
+directory is gitignored — the schema's source of truth is
+`src/database/schema/` plus the `drizzle/` migrations.
+
+#### 4. Inspect the Schema
 
 ```bash
-# Check database connection and schema
-yarn drizzle-kit introspect
-
-# View current schema
-yarn drizzle-kit studio
+yarn db:studio           # Drizzle Studio UI
 ```
 
 ### Migration Commands Reference
 
-| Command | Description | Environment |
-|---------|-------------|-------------|
-| `yarn drizzle-kit generate` | Generate migration files | All |
-| `yarn drizzle-kit push` | Push schema to database (dev) | Development |
-| `yarn drizzle-kit migrate` | Apply migrations | Production |
-| `yarn drizzle-kit studio` | Open database studio | Development |
-| `yarn drizzle-kit introspect` | Introspect existing database | All |
-| `yarn drizzle-kit drop` | Drop migration files | Development |
+| Command | Description |
+|---------|-------------|
+| `yarn db:generate` | Generate migration files from the schema |
+| `yarn db:migrate` | Apply pending migrations |
+| `yarn db:check` | Validate migration consistency |
+| `yarn db:fresh` | Drop, recreate and migrate (development) |
+| `yarn db:fresh:force` | Same, skipping confirmation |
+| `yarn db:studio` | Open Drizzle Studio |
 
 ### Seed Data (Optional)
 
-Currently, no seed data scripts are implemented. To add seed data:
+```bash
+yarn seed:users     # generates fake users (SEEDER_USER_COUNT, default 50)
+yarn seed:admin     # creates the admin account from the ADMIN_* variables
+```
 
-1. Create a seed script in `src/database/seeds/`
-2. Use Drizzle ORM to insert initial data
-3. Run the seed script after migrations
+Seeders live in `src/seeders/` and run standalone via ts-node, outside the Nest
+container. `ADMIN_PASSWORD` is required when `NODE_ENV=production`; in
+development it falls back to a documented default.
 
 ## 🏃‍♂️ Running the Project
 
@@ -268,8 +321,8 @@ For testing, create a separate test database:
 ```bash
 # Create test database
 psql -U postgres
-CREATE DATABASE sports_admin_test;
-GRANT ALL PRIVILEGES ON DATABASE sports_admin_test TO sports_user;
+CREATE DATABASE task_db_test;
+GRANT ALL PRIVILEGES ON DATABASE task_db_test TO task_user;
 \q
 ```
 
@@ -383,7 +436,7 @@ yarn build
 3. **Database Setup**
    ```bash
    # Run migrations
-   NODE_ENV=production yarn drizzle-kit migrate
+   NODE_ENV=production yarn db:migrate
    ```
 
 4. **Process Management**
@@ -431,7 +484,7 @@ pm2 logs backend-template
 curl https://your-domain.com/api/v1/health
 
 # Check database connectivity
-psql -h localhost -U sports_user -d sports_admin -c "SELECT 1;"
+psql -h localhost -U task_user -d task_db -c "SELECT 1;"
 
 # Check Redis connectivity
 redis-cli -h localhost -p 6379 ping
@@ -473,13 +526,13 @@ pm2 install pm2-logrotate
 
 ```bash
 # Database backup
-pg_dump -h localhost -U sports_user sports_admin > backup_$(date +%Y%m%d_%H%M%S).sql
+pg_dump -h localhost -U task_user task_db > backup_$(date +%Y%m%d_%H%M%S).sql
 
 # Automated backup script (add to crontab)
 #!/bin/bash
 BACKUP_DIR="/var/backups/sports-admin"
 mkdir -p $BACKUP_DIR
-pg_dump -h localhost -U sports_user sports_admin > $BACKUP_DIR/backup_$(date +%Y%m%d_%H%M%S).sql
+pg_dump -h localhost -U task_user task_db > $BACKUP_DIR/backup_$(date +%Y%m%d_%H%M%S).sql
 find $BACKUP_DIR -name "backup_*.sql" -mtime +7 -delete
 ```
 
@@ -496,16 +549,236 @@ pm2 restart backend-template
 sudo apt update && sudo apt upgrade -y
 ```
 
+## 🧩 API Conventions
+
+These apply to every module. Follow them and a new endpoint is consistent with
+the rest of the API for free.
+
+### Response envelope
+
+`TransformInterceptor` wraps every successful payload. Handlers return the bare
+payload — never build the envelope yourself.
+
+```jsonc
+// GET /users/:id
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Success",
+  "data": { "id": "…", "email": "…" }
+}
+```
+
+Return `{ message }` alone and the message is hoisted, with `data: null`:
+
+```jsonc
+{ "success": true, "statusCode": 200, "message": "User deleted successfully", "data": null }
+```
+
+Errors come from `GlobalExceptionFilter`. Throw Nest `HttpException` subclasses —
+never a bare `Error`, which becomes an opaque 500:
+
+```jsonc
+{
+  "success": false,
+  "statusCode": 404,
+  "message": "User not found",
+  "path": "/users/…",     // non-production only
+  "method": "GET"
+}
+```
+
+Routes returning raw bytes opt out with `@SkipTransform()` — see the file
+download endpoint.
+
+### Documenting responses in Swagger
+
+A bare `@ApiResponse({ type: Dto })` is **wrong**: it documents the payload
+without the envelope the client actually receives. Use the envelope decorators:
+
+```ts
+@ApiEnvelopeResponse(UserResponseDto, { status: 200, description: 'Found' })
+@ApiEnvelopePaginatedResponse(UserResponseDto, { status: 200, description: '…' })
+@ApiEnvelopeMessageResponse({ status: 200, description: '…', message: 'Deleted' })
+@ApiErrorResponse({ status: 404, description: 'Not found', message: 'User not found' })
+```
+
+Query parameters are generated from the DTO's `@ApiPropertyOptional` metadata —
+do not hand-write `@ApiQuery` per field, it drifts from the DTO.
+
+### Pagination
+
+One shared shape for every module. Do not define a per-module paginated DTO.
+
+```ts
+// service
+return PaginatedResponseDto.create(items, total, page, limit);
+
+// controller
+@ApiEnvelopePaginatedResponse(ItemResponseDto, { status: 200, description: '…' })
+findAll(): Promise<PaginatedResponseDto<ItemResponseDto>> { … }
+```
+
+`data` and `meta` are lifted onto the envelope:
+
+```jsonc
+{
+  "success": true, "statusCode": 200, "message": "Success",
+  "data": [ … ],
+  "meta": { "total": 150, "page": 1, "limit": 10, "totalPages": 15,
+            "hasNextPage": true, "hasPreviousPage": false }
+}
+```
+
+### Localization
+
+Language resolution: `x-lang` header → `?lang=` → `Accept-Language` →
+`I18N_FALLBACK_LANGUAGE` (`en`). Unknown codes fall back silently.
+
+```bash
+curl localhost:3000/auth/login -H 'x-lang: bn' …
+# { "success": false, "statusCode": 401, "message": "ভুল তথ্য দেওয়া হয়েছে" }
+```
+
+Services never inject an i18n service. They return or throw a **key enum**, and
+the envelope localizes it at the edge:
+
+```ts
+throw new NotFoundException(UsersMessage.NOT_FOUND);
+return { message: UsersMessage.DELETED };
+translate(StorageMessage.FILE_TOO_LARGE, { maxSize });   // with placeholders
+```
+
+Never write a key as a string literal. Add a member to the matching enum in
+`src/i18n/translation-keys.ts` and an entry in **every** locale file under
+`src/i18n/<lang>/`. A spec fails the build if a locale is missing a key, or
+defines one the enums do not declare.
+
+Strings that are not keys pass through untouched, so third-party and validation
+messages keep working.
+
+## 📁 File Storage
+
+`STORAGE_DRIVER` picks the backend at startup. Callers inject `StorageService`
+and never see which one is active.
+
+| Driver | Backend |
+|---|---|
+| `local` | local disk under `STORAGE_LOCAL_ROOT` |
+| `s3` | AWS S3, MinIO, Cloudflare R2, DigitalOcean Spaces, Wasabi |
+| `appwrite` | Appwrite Storage buckets |
+
+Adding a backend takes three edits: implement `StorageDriver`, add a
+`StorageDriverName` entry, register it in `STORAGE_DRIVERS` in
+`storage.module.ts`. Nothing else changes.
+
+### Local MinIO
+
+```bash
+docker compose up -d minio minio-init
+```
+
+`minio-init` creates `STORAGE_S3_BUCKET` and applies the policy named by
+`STORAGE_S3_VISIBILITY`. After changing that variable, re-run:
+
+```bash
+docker compose up -d --force-recreate minio-init
+```
+
+### Endpoints
+
+| Method | Path | Notes |
+|---|---|---|
+| `POST` | `/files/upload` | `multipart/form-data`, field `file` |
+| `GET` | `/files` | paginated, admin/moderator |
+| `GET` | `/files/:id` | metadata only |
+| `GET` | `/files/:id/url` | fetchable URL |
+| `GET` | `/files/:id/download` | raw bytes, no envelope |
+| `DELETE` | `/files/:id` | admin |
+
+Uploads are stored under a generated key (`uploads/YYYY/MM/<uuid>.<ext>`) and
+recorded in the `files` table. The client-supplied filename is kept as metadata
+but never decides where bytes land.
+
+### Public vs private URLs
+
+`STORAGE_S3_VISIBILITY` controls the bucket policy **and** how URLs are built:
+
+| | `private` | `public` |
+|---|---|---|
+| `GET /files/:id/url` | presigned, expires | permanent, cacheable |
+| `expiresIn` in the response | `STORAGE_URL_EXPIRES_IN` | `0` |
+| Anonymous fetch | 403 | 200 |
+
+Use `public` for avatars and other non-sensitive assets — the URL can be stored
+on a record and dropped into an image tag. Keep `private` for anything
+sensitive; anyone holding a public URL can read that object forever.
+
+> **Mobile / device testing**: `localhost` in a URL means the device itself. Set
+> `STORAGE_S3_PUBLIC_ENDPOINT` to a LAN address or CDN domain — the server keeps
+> using `STORAGE_S3_ENDPOINT` internally while clients get the reachable one.
+
+### Handling uploads in a controller
+
+Do not touch the raw request. `@UploadedFile()` parses the multipart body,
+enforces limits, and hands back a value ready for `StorageService.upload()`.
+
+```ts
+@Post('avatar')
+@ApiFileUpload('image')                       // Swagger file picker
+uploadAvatar(
+  @UploadedFile({
+    field: 'image',
+    maxSize: '5mb',                           // or bytes: 5242880
+    mimeTypes: ['image/png', 'image/jpeg', 'application/pdf'],
+  })
+  image: UploadedFileData,
+  @CurrentUser() user: UserResponseDto,
+) {
+  return this.storageService.upload({
+    buffer: image.buffer,
+    originalName: image.originalName,
+    mimeType: image.mimeType,
+    uploadedBy: user.id,
+  });
+}
+```
+
+Other forms:
+
+```ts
+@UploadedFile({ required: false }) file?: UploadedFileData   // optional upload
+@UploadedFiles() files: UploadedFileData[]                   // several files
+@MultipartBody(CreatePhotoDto) dto: CreatePhotoDto           // non-file fields, validated
+```
+
+`UploadedFileData` is `{ field, originalName, mimeType, buffer, size }`.
+
+Failure modes are handled for you: **400** when the request is not multipart or a
+required file is missing, **413** above `maxSize`, **415** for a MIME type
+outside the allow-list — all localized.
+
+The multipart body is parsed once per request and cached, so `@UploadedFile()`
+and `@MultipartBody()` can appear on the same handler without racing for the
+stream.
+
 ## 🔧 Development Tools
 
 ### Available Services
 
-- **Application**: http://localhost:8000
-- **Bull Board**: http://localhost:3000 (Job queue monitoring)
-- **Drizzle Studio**: `yarn drizzle-kit studio`
-- **PostgreSQL**: localhost:5432
-- **Redis**: localhost:6379
-- **Redis BullMQ**: localhost:6380
+Ports below match `docker-compose.yml`; the app port comes from `PORT` in `.env`.
+
+| Service | Address | Notes |
+|---|---|---|
+| Application | http://localhost:3000 | `PORT` in `.env` |
+| Swagger UI | http://localhost:3000/api/docs | `SWAGGER_PATH`, OpenAPI JSON at `/api/docs/json` |
+| Bull Board | http://localhost:3001 | job queue monitoring |
+| PostgreSQL | localhost:5433 | |
+| Redis (cache) | localhost:6381 | |
+| Redis (BullMQ) | localhost:6382 | |
+| MinIO API | http://localhost:9000 | S3 endpoint the app talks to |
+| MinIO Console | http://localhost:9001 | login with `STORAGE_S3_ACCESS_KEY_ID` / `..._SECRET_ACCESS_KEY` |
+| Drizzle Studio | `yarn db:studio` | |
 
 ### Useful Commands
 
@@ -534,7 +807,7 @@ rm -rf node_modules yarn.lock && yarn install
 sudo systemctl status postgresql
 
 # Check database connectivity
-psql -h localhost -U sports_user -d sports_admin
+psql -h localhost -U task_user -d task_db
 
 # Reset database connection
 docker-compose restart postgres
@@ -563,10 +836,8 @@ kill -9 <PID>
 #### Migration Issues
 
 ```bash
-# Reset migrations (development only)
-yarn drizzle-kit drop
-yarn drizzle-kit generate
-yarn drizzle-kit push
+# Rebuild the database from scratch (development only)
+yarn db:fresh:force
 ```
 
 ### Getting Help
