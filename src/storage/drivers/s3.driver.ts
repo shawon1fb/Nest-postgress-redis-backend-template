@@ -12,7 +12,11 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { StorageConfig, StorageDriverName } from '../../config/storage.config';
+import {
+  StorageConfig,
+  StorageDriverName,
+  StorageVisibility,
+} from '../../config/storage.config';
 import {
   PutObjectInput,
   PutObjectResult,
@@ -29,6 +33,9 @@ import { StorageMessage } from '../../common/i18n';
 @Injectable()
 export class S3StorageDriver implements StorageDriver {
   readonly name = StorageDriverName.S3;
+
+  /** Public buckets serve permanent URLs; private ones are signed per request. */
+  readonly urlsArePermanent: boolean;
 
   private readonly client: S3Client;
   private readonly bucket: string;
@@ -51,6 +58,7 @@ export class S3StorageDriver implements StorageDriver {
     }
 
     this.bucket = config.s3Bucket;
+    this.urlsArePermanent = config.s3Visibility === StorageVisibility.PUBLIC;
     this.client = new S3Client({
       region: config.s3Region,
       forcePathStyle: config.s3ForcePathStyle,
@@ -115,11 +123,34 @@ export class S3StorageDriver implements StorageDriver {
   }
 
   async url(key: string, options?: SignedUrlOptions): Promise<string> {
+    // A public bucket needs no signature, and an unsigned URL is permanent and
+    // cacheable — what an <img> tag or mobile image view wants.
+    if (this.urlsArePermanent) {
+      return Promise.resolve(this.publicUrl(key));
+    }
+
     return getSignedUrl(
       this.client,
       new GetObjectCommand({ Bucket: this.bucket, Key: key }),
       { expiresIn: options?.expiresIn ?? this.config.urlExpiresIn },
     );
+  }
+
+  /**
+   * Mirrors how the SDK addresses objects: path-style puts the bucket in the
+   * path, virtual-hosted style puts it in the hostname.
+   */
+  private publicUrl(key: string): string {
+    const endpoint = this.config.s3ClientEndpoint;
+    const encodedKey = key.split('/').map(encodeURIComponent).join('/');
+
+    if (this.config.s3ForcePathStyle) {
+      return `${endpoint}/${this.bucket}/${encodedKey}`;
+    }
+
+    const url = new URL(endpoint);
+    url.hostname = `${this.bucket}.${url.hostname}`;
+    return `${url.origin}/${encodedKey}`;
   }
 
   private toHttpException(error: unknown, fallbackMessage: string): Error {

@@ -14,6 +14,7 @@ import { StorageService } from './storage.service';
 
 const driverStub = (): jest.Mocked<StorageDriver> => ({
   name: StorageDriverName.LOCAL,
+  urlsArePermanent: false,
   put: jest
     .fn()
     .mockImplementation(({ key, body }: PutObjectInput) =>

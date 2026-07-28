@@ -135,7 +135,11 @@ Never write a key as a string literal; add a member to the matching enum in `src
 
 **Storage**: `STORAGE_DRIVER` (`local` | `s3` | `appwrite`) picks one `StorageDriver` implementation at startup; `StorageService` is the only thing callers inject. The `s3` driver also covers MinIO, Cloudflare R2, DigitalOcean Spaces and Wasabi via `STORAGE_S3_ENDPOINT` + `STORAGE_S3_FORCE_PATH_STYLE` — S3-compatible providers need no new driver.
 
-Local development uses the bundled MinIO: `docker compose up -d minio` starts it and `minio-init` creates `STORAGE_S3_BUCKET`. API on `:9000`, console on `:9001`. docker-compose reads the same `STORAGE_S3_*` vars as the app, so one set of values configures both. Uploads are recorded in the `files` table and addressed by a generated key, never by the client-supplied filename. To add a backend: implement `StorageDriver`, add a `StorageDriverName` entry, register it in `STORAGE_DRIVERS` in `storage.module.ts` — nothing else changes.
+Local development uses the bundled MinIO: `docker compose up -d minio` starts it and `minio-init` creates `STORAGE_S3_BUCKET`. API on `:9000`, console on `:9001`. docker-compose reads the same `STORAGE_S3_*` vars as the app, so one set of values configures both.
+
+`STORAGE_S3_VISIBILITY` (`private` | `public`) decides both the bucket policy `minio-init` applies and how `url()` builds links — private returns a presigned URL that expires, public returns a permanent cacheable one (use it for avatars, never for sensitive files). Changing it needs `docker compose up -d --force-recreate minio-init` to re-apply the policy. Drivers advertise which kind they return via `StorageDriver.urlsArePermanent`, and `GET /files/:id/url` reports `expiresIn: 0` for permanent URLs.
+
+When clients cannot reach `STORAGE_S3_ENDPOINT` — a phone cannot resolve `localhost` or a Docker hostname — set `STORAGE_S3_PUBLIC_ENDPOINT` to the address they should use; URL building prefers it. Uploads are recorded in the `files` table and addressed by a generated key, never by the client-supplied filename. To add a backend: implement `StorageDriver`, add a `StorageDriverName` entry, register it in `STORAGE_DRIVERS` in `storage.module.ts` — nothing else changes.
 
 ## Adding a New Module
 

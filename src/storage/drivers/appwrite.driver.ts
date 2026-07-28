@@ -28,6 +28,9 @@ import { StorageMessage } from '../../common/i18n';
 export class AppwriteStorageDriver implements StorageDriver {
   readonly name = StorageDriverName.APPWRITE;
 
+  /** URLs carry a short-lived resource token. */
+  readonly urlsArePermanent = false;
+
   private readonly storage: Storage;
   private readonly tokens: Tokens;
   private readonly bucketId: string;

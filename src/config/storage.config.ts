@@ -22,6 +22,21 @@ export enum StorageDriverName {
 }
 
 /**
+ * Who may read objects in the bucket.
+ *
+ * `private` — nothing is readable without a signature; `url()` returns a
+ * short-lived presigned URL that expires after `STORAGE_URL_EXPIRES_IN`.
+ *
+ * `public` — anonymous read is allowed, so `url()` returns a permanent,
+ * cache-friendly URL. Suitable for avatars and other non-sensitive assets;
+ * anyone holding the key can read the object forever.
+ */
+export enum StorageVisibility {
+  PRIVATE = 'private',
+  PUBLIC = 'public',
+}
+
+/**
  * Only the block matching STORAGE_DRIVER needs to be filled in; the driver
  * validates its own required values at startup.
  */
@@ -116,6 +131,33 @@ export class StorageConfig {
   @IsBoolean()
   @Value('STORAGE_S3_FORCE_PATH_STYLE', { default: false, parse: toBoolean })
   s3ForcePathStyle: boolean;
+
+  /**
+   * Read access on the bucket. docker-compose applies the matching anonymous
+   * policy to the local MinIO bucket from this same value, so the app's URL
+   * strategy and the bucket policy cannot drift apart.
+   */
+  @IsEnum(StorageVisibility, {
+    message: `STORAGE_S3_VISIBILITY must be one of: ${Object.values(StorageVisibility).join(', ')}`,
+  })
+  @Value('STORAGE_S3_VISIBILITY', { default: StorageVisibility.PRIVATE })
+  s3Visibility: StorageVisibility;
+
+  /**
+   * Base URL clients should use to reach the bucket, when it differs from
+   * `STORAGE_S3_ENDPOINT` — the server may talk to MinIO over a Docker network
+   * name while phones and browsers need a LAN address or CDN domain.
+   * Empty means "reuse STORAGE_S3_ENDPOINT".
+   */
+  @IsOptional()
+  @IsString()
+  @Value('STORAGE_S3_PUBLIC_ENDPOINT', { default: '' })
+  s3PublicEndpoint: string;
+
+  /** Endpoint used when building client-facing URLs. */
+  get s3ClientEndpoint(): string {
+    return (this.s3PublicEndpoint || this.s3Endpoint).replace(/\/+$/, '');
+  }
 
   // --- appwrite driver ------------------------------------------------------
 

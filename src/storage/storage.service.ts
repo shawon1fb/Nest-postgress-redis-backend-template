@@ -12,7 +12,7 @@ import {
 import { and, count, desc, eq } from 'drizzle-orm';
 import { DatabaseService } from '../database/database.service';
 import { files, FileRecord } from '../database/schema';
-import { StorageConfig, StorageDriverName } from '../config/storage.config';
+import { StorageConfig } from '../config/storage.config';
 import { MessageResponseDto, PaginatedResponseDto } from '../common/dto';
 import { PaginationUtil } from '../common/utils';
 import { STORAGE_DRIVER, StorageDriver } from './interfaces';
@@ -134,8 +134,8 @@ export class StorageService {
 
     return {
       url: await this.driver.url(record.key, { expiresIn: ttl }),
-      // The local driver serves plain public URLs that never expire.
-      expiresIn: this.driver.name === StorageDriverName.LOCAL ? 0 : ttl,
+      // Permanent URLs report 0 so clients know they are safe to cache.
+      expiresIn: this.driver.urlsArePermanent ? 0 : ttl,
     };
   }
 

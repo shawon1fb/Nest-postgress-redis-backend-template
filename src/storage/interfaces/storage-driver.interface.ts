@@ -42,6 +42,13 @@ export interface SignedUrlOptions {
 export interface StorageDriver {
   readonly name: StorageDriverName;
 
+  /**
+   * True when `url()` returns a link that never expires, so callers may store
+   * or cache it. False when the link is signed and short-lived, and must be
+   * refetched before each use.
+   */
+  readonly urlsArePermanent: boolean;
+
   /** Writes an object, overwriting any existing object at `key`. */
   put(input: PutObjectInput): Promise<PutObjectResult>;
 

@@ -26,6 +26,9 @@ import { StorageMessage } from '../../common/i18n';
 export class LocalStorageDriver implements StorageDriver {
   readonly name = StorageDriverName.LOCAL;
 
+  /** Serves plain public URLs built from STORAGE_LOCAL_BASE_URL. */
+  readonly urlsArePermanent = true;
+
   private readonly root: string;
 
   constructor(private readonly config: StorageConfig) {
