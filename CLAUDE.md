@@ -106,6 +106,10 @@ src/
 
 **Config classes** use `@Configuration()` + `@Value('ENV_VAR')` decorators. All configs are injected via `ConfigifyModule.forRootAsync()` — never read `process.env` directly in application code.
 
+Every non-string value needs an explicit `parse` from `src/config/parsers.ts` (`toInt`, `toNumber`, `toBoolean`) — env values arrive as strings, and the string `"false"` is truthy. Validate with real constraints (`@IsInt`, `@IsBoolean`, `@IsEnum`), not a bare `@IsNotEmpty`, which passes for `"abc"` on a `number` field. Invalid config aborts startup.
+
+When a field carries a development default that would be unsafe to inherit in production, add `@RequiredInProduction('ENV_VAR')` from `src/config/validators/` — it fails the boot if `NODE_ENV=production` and the variable was never set explicitly.
+
 **Database access**: Inject `DatabaseService` for common ops. For complex queries, call `databaseService.getDatabase()` to get the raw Drizzle `db` instance and use the query builder. Schema types come from `typeof users.$inferSelect` / `$inferInsert`.
 
 **Auth flow**: `JwtAuthGuard` is applied globally in `AuthModule`. Mark public routes with `@Public()` decorator. JWT payload shape is `JwtPayload` (sub=userId, email, username, role). Both access token and refresh token are issued on login/register.

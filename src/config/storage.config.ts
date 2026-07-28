@@ -6,8 +6,10 @@ import {
   IsOptional,
   IsString,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { toBoolean, toInt } from './parsers';
+import { RequiredInProduction } from './validators';
 
 /**
  * Storage backends the app can be pointed at. Adding a new one means adding a
@@ -25,9 +27,15 @@ export enum StorageDriverName {
  */
 @Configuration()
 export class StorageConfig {
+  /**
+   * Defaults to `local` for zero-config development. Production must name a
+   * backend explicitly — inheriting `local` there writes uploads to a container
+   * filesystem that disappears on restart, and nothing would report it.
+   */
   @IsEnum(StorageDriverName, {
     message: `STORAGE_DRIVER must be one of: ${Object.values(StorageDriverName).join(', ')}`,
   })
+  @RequiredInProduction('STORAGE_DRIVER')
   @Value('STORAGE_DRIVER', { default: StorageDriverName.LOCAL })
   driver: StorageDriverName;
 
@@ -63,9 +71,16 @@ export class StorageConfig {
   @Value('STORAGE_LOCAL_ROOT', { default: './storage/uploads' })
   localRoot: string;
 
-  /** Public base URL that maps to `localRoot`, used to build file URLs. */
+  /**
+   * Public base URL that maps to `localRoot`, used to build file URLs.
+   * Only meaningful for the local driver, which cannot sign URLs without it.
+   */
   @IsOptional()
   @IsString()
+  @ValidateIf(
+    (config: StorageConfig) => config.driver === StorageDriverName.LOCAL,
+  )
+  @RequiredInProduction('STORAGE_LOCAL_BASE_URL')
   @Value('STORAGE_LOCAL_BASE_URL', { default: '' })
   localBaseUrl: string;
 
