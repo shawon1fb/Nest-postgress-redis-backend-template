@@ -7,22 +7,19 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
-  Req,
   Res,
   UseGuards,
   ValidationPipe,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
-  ApiBody,
-  ApiConsumes,
   ApiOperation,
   ApiParam,
   ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { FastifyReply, FastifyRequest } from 'fastify';
+import { FastifyReply } from 'fastify';
 import { StorageService } from './storage.service';
 import { FileResponseDto, FileUrlResponseDto, QueryFileDto } from './dto';
 import { MessageResponseDto } from '../common/dto';
@@ -31,8 +28,11 @@ import {
   ApiEnvelopePaginatedResponse,
   ApiEnvelopeMessageResponse,
   ApiErrorResponse,
+  ApiFileUpload,
   SkipTransform,
+  UploadedFile,
 } from '../common/decorators';
+import { UploadedFileData } from '../common/multipart';
 import { PaginatedResponseDto } from '../common/dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -65,16 +65,7 @@ export class StorageController {
     description:
       'Stores a file in the backend selected by STORAGE_DRIVER and records its metadata.',
   })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['file'],
-      properties: {
-        file: { type: 'string', format: 'binary' },
-      },
-    },
-  })
+  @ApiFileUpload('file')
   @ApiEnvelopeResponse(FileResponseDto, {
     status: 201,
     description: 'File uploaded successfully',
@@ -96,24 +87,13 @@ export class StorageController {
     message: 'MIME type application/x-msdownload is not allowed',
   })
   async upload(
-    @Req() request: FastifyRequest,
+    @UploadedFile('file') file: UploadedFileData,
     @CurrentUser() user: UserResponseDto,
   ): Promise<FileResponseDto> {
-    if (!request.isMultipart()) {
-      throw new BadRequestException(StorageMessage.MULTIPART_REQUIRED);
-    }
-
-    const upload = await request.file();
-    if (!upload) {
-      throw new BadRequestException(StorageMessage.NO_FILE_UPLOADED);
-    }
-
-    const buffer = await upload.toBuffer();
-
     return this.storageService.upload({
-      buffer,
-      originalName: upload.filename,
-      mimeType: upload.mimetype,
+      buffer: file.buffer,
+      originalName: file.originalName,
+      mimeType: file.mimeType,
       uploadedBy: user?.id,
     });
   }

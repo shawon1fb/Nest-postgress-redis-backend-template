@@ -6,5 +6,7 @@
   "file_too_large": "File exceeds the maximum allowed size of {maxSize} bytes",
   "mime_not_allowed": "MIME type {mimeType} is not allowed. Allowed: {allowed}",
   "deleted": "File deleted successfully",
-  "invalid_expires_in": "expiresIn must be a positive number"
+  "invalid_expires_in": "expiresIn must be a positive number",
+  "file_field_missing": "No file was uploaded in field \"{field}\"",
+  "file_too_large_limit": "File exceeds the maximum allowed upload size"
 }

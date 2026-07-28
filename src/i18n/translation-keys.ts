@@ -60,6 +60,8 @@ export enum StorageMessage {
   MIME_NOT_ALLOWED = 'storage.mime_not_allowed',
   DELETED = 'storage.deleted',
   INVALID_EXPIRES_IN = 'storage.invalid_expires_in',
+  FILE_FIELD_MISSING = 'storage.file_field_missing',
+  FILE_TOO_LARGE_LIMIT = 'storage.file_too_large_limit',
 }
 
 /** Union of every message enum, for helpers that accept any key. */

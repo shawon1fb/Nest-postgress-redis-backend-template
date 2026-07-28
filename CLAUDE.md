@@ -75,6 +75,8 @@ Already shared — use these, don't recreate:
 | User-facing message | A `*Message` enum member from `src/i18n/translation-keys.ts` — never a string literal |
 | Raw/streamed response | `@SkipTransform()` — opts a route out of the envelope |
 | File storage | `StorageService` (never talk to a driver directly) |
+| Reading an upload | `@UploadedFile()` / `@UploadedFiles()` / `@MultipartBody(Dto)` — never hand-roll `request.file()` |
+| Documenting an upload | `@ApiFileUpload(field)` |
 | Error envelope | `GlobalExceptionFilter` (global — throw Nest `HttpException` subclasses, never bare `Error`) |
 | Filtering / sorting helpers | `FilterUtil`, `PaginationUtil` |
 
@@ -138,6 +140,8 @@ Never write a key as a string literal; add a member to the matching enum in `src
 Local development uses the bundled MinIO: `docker compose up -d minio` starts it and `minio-init` creates `STORAGE_S3_BUCKET`. API on `:9000`, console on `:9001`. docker-compose reads the same `STORAGE_S3_*` vars as the app, so one set of values configures both.
 
 `STORAGE_S3_VISIBILITY` (`private` | `public`) decides both the bucket policy `minio-init` applies and how `url()` builds links — private returns a presigned URL that expires, public returns a permanent cacheable one (use it for avatars, never for sensitive files). Changing it needs `docker compose up -d --force-recreate minio-init` to re-apply the policy. Drivers advertise which kind they return via `StorageDriver.urlsArePermanent`, and `GET /files/:id/url` reports `expiresIn: 0` for permanent URLs.
+
+**Uploads**: handlers never touch the raw request. `@UploadedFile({ field, required, maxSize, mimeTypes })` parses the multipart body, enforces per-route limits (`maxSize: '5mb'`, `mimeTypes: ['image/png']`) and hands back an `UploadedFileData` ready for `StorageService.upload()`. Pair it with `@ApiFileUpload(field)` for Swagger and `@MultipartBody(Dto)` for the non-file fields. The body is parsed once per request and cached, so several of these decorators can share one handler.
 
 When clients cannot reach `STORAGE_S3_ENDPOINT` — a phone cannot resolve `localhost` or a Docker hostname — set `STORAGE_S3_PUBLIC_ENDPOINT` to the address they should use; URL building prefers it. Uploads are recorded in the `files` table and addressed by a generated key, never by the client-supplied filename. To add a backend: implement `StorageDriver`, add a `StorageDriverName` entry, register it in `STORAGE_DRIVERS` in `storage.module.ts` — nothing else changes.
 
