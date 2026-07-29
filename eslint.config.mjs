@@ -32,4 +32,17 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-argument': 'warn'
     },
   },
+  {
+    // Test doubles are deliberately loosely typed: jest mocks erase signatures,
+    // and asserting on `mock.calls` reads untyped tuples. These rules protect
+    // production code and only produce noise here.
+    files: ['**/*.spec.ts', 'src/test-utils/**/*.ts'],
+    rules: {
+      '@typescript-eslint/unbound-method': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+    },
+  },
 );
