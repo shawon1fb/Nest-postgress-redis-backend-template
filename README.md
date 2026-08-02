@@ -1,11 +1,9 @@
 # NestJS Backend Template 🚀
 
-> Choose your language / ভাষা নির্বাচন করুন:
-> 🇬🇧 [English](#-english) | 🇧🇩 [বাংলা](#-বাংলা)
+> 🌍 Choose your language / আপনার ভাষা নির্বাচন করুন (Click to expand / ক্লিক করে খুলুন)
 
----
-
-## 🇬🇧 English
+<details open>
+<summary><h2>🇬🇧 English</h2></summary>
 
 A comprehensive and user-friendly backend template built with NestJS, Fastify, Drizzle ORM, and PostgreSQL. It is designed to be highly scalable, secure, and ready for production.
 
@@ -79,9 +77,10 @@ Your app is now running on `http://localhost:3000`! 🎉
 | `yarn test` | Run unit tests |
 | `yarn lint` | Lint the codebase |
 
----
+</details>
 
-## 🇧🇩 বাংলা
+<details>
+<summary><h2>🇧🇩 বাংলা</h2></summary>
 
 এটি NestJS, Fastify, Drizzle ORM এবং PostgreSQL দিয়ে তৈরি একটি পাওয়ারফুল এবং ইউজার-ফ্রেন্ডলি ব্যাকএন্ড টেমপ্লেট। যেকোনো স্কেলেবল এবং প্রোডাকশন-রেডি প্রজেক্ট দ্রুত শুরু করার জন্য এটি ডিজাইন করা হয়েছে।
 
@@ -153,6 +152,8 @@ yarn start:dev
 | `yarn db:studio` | ডাটাবেস দেখার জন্য Drizzle Studio ওপেন করতে |
 | `yarn test` | ইউনিট টেস্ট রান করতে |
 | `yarn lint` | কোডবেস লিন্ট করতে |
+
+</details>
 
 ---
 *Built with ❤️ for scalable backend applications.*
