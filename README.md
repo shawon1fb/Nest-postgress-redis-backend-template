@@ -52,8 +52,8 @@ docker-compose --version
 ### 1. Clone the Repository
 
 ```bash
-git clone <repository-url>
-cd backend-template
+git clone https://github.com/shawon1fb/Nest-postgress-redis-backend-template
+cd Nest-postgress-redis-backend-template
 ```
 
 ### 2. Install Dependencies
